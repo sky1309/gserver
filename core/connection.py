@@ -4,7 +4,7 @@ import asyncore
 class BaseSocketHandler(asyncore.dispatcher):
     # x kb
     # 一次最多接受的数据大小
-    MAX_RECV_SIZE = 128 * 1024
+    MAX_RECV_SIZE = 256 * 1024
 
     def __init__(self, sock=None, *args, **kwargs):
         super().__init__(sock, *args, **kwargs)
@@ -31,7 +31,7 @@ class BaseSocketHandler(asyncore.dispatcher):
 
     def _handle_read(self):
         data = self.recv(self.MAX_RECV_SIZE)
-        self._recv_buffer.append(data)
+        self._recv_buffer.extend(data)
 
     def clear_recv_buffer(self):
         self._recv_buffer.clear()
@@ -45,7 +45,7 @@ class BaseSocketServer(asyncore.dispatcher):
         self.bind(addr)
         self.listen(backlog)
 
-        # 总的服务器
+        # 总的服务对象
         self._server = server
 
     def handle_accepted(self, sock, addr):

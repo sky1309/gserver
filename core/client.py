@@ -1,15 +1,14 @@
 import bson
-import logging
-
-from .server import Server
 
 
 class Client:
-    def __init__(self, handler, server: Server, client_id=None):
+    def __init__(self, handler, server, client_id=None):
         self._id = client_id or self.gen_client_id()
         self.handler = handler
         self._server = server
 
+        self.handler.client = self
+        # 客户端收到的数据缓冲区
         self._recv_buffer = bytearray()
 
     def register_client(self):
@@ -18,7 +17,7 @@ class Client:
 
     def handle_data(self, data: bytearray):
         # 客户端处理数据，self.handler发送火来的数据
-        logging.info("client {} 接收到handler发来的数据".format(self._id), data)
+        print("client {} 接收到handler发来的数据".format(self._id), data)
 
     @staticmethod
     def gen_client_id():
