@@ -11,21 +11,33 @@ class SocketProtocol:
 
     def pack_data(self, data):
         """打包数据"""
-        s = bytes(json.dumps(data))
+        s = bytes(self.dumps(data))
         head = self.struct.pack(len(data))
         return head + s
 
-    def unpack_data(self, data):
+    def unpack_data(self, bytes_data):
+        data = self.loads(bytes_data.encode())
+        return data
+
+    def split_data(self, bytes_data):
         """解析接收到的数据"""
-        data_length = len(data)
+        data_length = len(bytes_data)
         if data_length < self.struct.size:
-            return b'', -1
+            return None, -1
 
         # 解析出head中标明后面的数据的长度
-        valid_data_length, = self.struct.unpack_from(data, 0)
+        valid_data_length, = self.struct.unpack_from(bytes_data, 0)
         offset = self.struct.size + valid_data_length
         # 如果数据还没有接受完毕，那么久先不处理
         if data_length < offset:
-            return b'', -1
+            return None, -1
 
-        return data[self.struct.size: offset], offset
+        return bytes_data[self.struct.size: offset], offset
+
+    @staticmethod
+    def loads(bytes_data):
+        return json.loads(bytes_data.decode())
+
+    @staticmethod
+    def dumps(data):
+        return json.dumps(data)
