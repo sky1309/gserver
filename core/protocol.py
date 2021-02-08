@@ -1,6 +1,8 @@
 import json
 import struct
 
+from marshmallow import fields, schema, utils as marshmallow_utils
+
 
 class SocketProtocol:
     # 传输数据格式解析
@@ -11,12 +13,12 @@ class SocketProtocol:
 
     def pack_data(self, data):
         """打包数据"""
-        s = bytes(self.dumps(data))
+        s = self.dumps(data).encode()
         head = self.struct.pack(len(data))
         return head + s
 
     def unpack_data(self, bytes_data):
-        data = self.loads(bytes_data.encode())
+        data = self.loads(bytes_data)
         return data
 
     def split_data(self, bytes_data):
@@ -41,3 +43,23 @@ class SocketProtocol:
     @staticmethod
     def dumps(data):
         return json.dumps(data)
+
+
+class ProtocolStruct(schema.Schema):
+    # 数据传输的结构
+
+    # command 指令
+    c = fields.String(required=True, validate=lambda k: len(k) > 0)
+    # data 数据
+    d = fields.Mapping()
+
+    class Meta:
+        unknown = marshmallow_utils.EXCLUDE
+
+
+class Request:
+    def __init__(self, client, c, d, *args, **kwargs):
+        super(Request, self).__init__(*args, **kwargs)
+        self.cmd = c
+        self.params = d
+        self.client = client

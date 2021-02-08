@@ -40,5 +40,5 @@ class RequestHandleThread(threading.Thread):
 
     def run(self):
         while True:
-            data = self.get()
-            print("thread handler", data)
+            handler, request = self.get()
+            handler(request)

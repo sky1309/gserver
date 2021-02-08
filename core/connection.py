@@ -41,7 +41,7 @@ class SocketHandler(asyncore.dispatcher):
 
         with self.write_lock:
             self.send(self._send_buffer)
-            self.clear_recv_buffer()
+            self.clear_send_buffer()
 
     def writable(self):
         return len(self._send_buffer) > 0
@@ -60,6 +60,9 @@ class SocketHandler(asyncore.dispatcher):
 
     def clear_recv_buffer(self):
         self._recv_buffer.clear()
+
+    def clear_send_buffer(self):
+        self._send_buffer.clear()
 
 
 class SocketServer(asyncore.dispatcher):
