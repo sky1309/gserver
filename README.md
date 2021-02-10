@@ -25,12 +25,15 @@ if __name__ == '__main__':
 
 ```python
 # Client
+
 import socket
 from core.server import Server
 
 protocol = Server.get_default_protocol_ins()
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
 s.connect(("127.0.0.1",8000))
 s.send(protocol.pack_data({"c": "hello_world", "d": {}}))
+
 print(s.recv(1024))
 ```
