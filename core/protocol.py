@@ -57,9 +57,25 @@ class ProtocolStruct(schema.Schema):
         unknown = marshmallow_utils.EXCLUDE
 
 
+class ProtocolResponseStruct(schema.Schema):
+    # command 指令
+    c = fields.String(required=True, validate=lambda k: len(k) > 0)
+    # data 数据
+    d = fields.Mapping()
+    # 状态码
+    s = fields.Integer()
+
+
 class Request:
     def __init__(self, client, c, d, *args, **kwargs):
         super(Request, self).__init__(*args, **kwargs)
         self.cmd = c
         self.params = d
         self.client = client
+
+
+class Response:
+    def __init__(self, c, d, s=0):
+        self.c = c
+        self.d = d or dict()
+        self.s = s

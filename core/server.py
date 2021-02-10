@@ -5,9 +5,9 @@ import threading
 
 from marshmallow import exceptions
 
-from .common import log
+from .common import log, ResponseStatusEnum
 from .exceptions import DuplicateRegisterHandler
-from .protocol import Request, SocketProtocol, ProtocolStruct
+from .protocol import Request, Response, SocketProtocol, ProtocolStruct, ProtocolResponseStruct
 from .connection import SocketServer
 from .handle import RequestHandleThread
 
@@ -85,14 +85,14 @@ class Client:
             params = self._server.protocol_schema.load(self._server.protocol.unpack_data(data))
         except (exceptions.ValidationError, Exception) as err:
             log.error("数据解析失败: {}".format(err))
-            request = None
+            request = Request(self, "", None)
             handler = self._server.handle_error
         else:
             request = Request(self, **params)
             if self._server.is_register_handler(request.cmd):
                 handler = self._server.register_handlers[request.cmd]
             else:
-                handler = self._server.handle_implement
+                handler = self._server.handle_unimplemented
 
         self._server.handle_thread.put((handler, request))
 
@@ -119,6 +119,7 @@ class Server:
 
         self._protocol = protocol or self.get_default_protocol_ins()
         self._protocol_schema = self.get_default_protocol_schema()
+        self._protocol_response_schema = self.get_default_protocol_response_schema()
 
         # 多线处理
         self.handle_thread = RequestHandleThread()
@@ -140,6 +141,10 @@ class Server:
     @staticmethod
     def get_default_protocol_schema():
         return ProtocolStruct()
+
+    @staticmethod
+    def get_default_protocol_response_schema():
+        return ProtocolResponseStruct()
 
     def new_client(self, handler):
         """有客户端连接上了，新建一个客户端，并存储
@@ -181,11 +186,17 @@ class Server:
     def is_register_handler(self, cmd):
         return cmd in self.register_handlers
 
-    def handle_implement(self, request):
+    def handle_unimplemented(self, request):
         log.warning("{} 没有注册的路由 {}".format(self, request))
+        request.client.send(self._protocol_response_schema.dumps(
+            Response(c=request.cmd, d=None, s=ResponseStatusEnum.unimplemented)
+        ))
 
     def handle_error(self, request):
         log.warning("{} 出错了 {}".format(self, request))
+        request.client.send(self._protocol_response_schema.dumps(
+            Response(c="error", d=None, s=ResponseStatusEnum.unpack_error)
+        ))
 
     def serve_forever(self):
         log.info("serve start: {}".format(self.socket_server.addr))
@@ -193,4 +204,4 @@ class Server:
         # 启动处理线程
         self.handle_thread.start()
 
-        asyncore.loop(0.01)
+        asyncore.loop(0.01, use_poll=True)
