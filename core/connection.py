@@ -15,6 +15,7 @@ class SocketHandler(asyncore.dispatcher):
         self._recv_buffer = bytearray()
         # 写锁、发送缓冲区
         self._send_buffer = bytearray()
+        self.read_lock = threading.Lock()
         self.write_lock = threading.Lock()
 
     @property
@@ -27,13 +28,14 @@ class SocketHandler(asyncore.dispatcher):
 
     def handle_read(self):
         data = self.recv(self.MAX_RECV_SIZE)
-        self._recv_buffer.extend(data)
+        with self.read_lock:
+            self._recv_buffer.extend(data)
 
         if self._client:
             self._client.handle_read(self._recv_buffer)
 
         # 清空接受缓冲区的数据
-        self.clear_recv_buffer()
+        self._recv_buffer.clear()
 
     def handle_write(self):
         if not self._send_buffer:
@@ -41,7 +43,7 @@ class SocketHandler(asyncore.dispatcher):
 
         with self.write_lock:
             self.send(self._send_buffer)
-            self.clear_send_buffer()
+            self._send_buffer.clear()
 
     def writable(self):
         return len(self._send_buffer) > 0
@@ -57,12 +59,6 @@ class SocketHandler(asyncore.dispatcher):
         if self._client:
             self._client.handle_close()
         self.close()
-
-    def clear_recv_buffer(self):
-        self._recv_buffer.clear()
-
-    def clear_send_buffer(self):
-        self._send_buffer.clear()
 
 
 class SocketServer(asyncore.dispatcher):
