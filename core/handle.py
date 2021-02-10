@@ -17,7 +17,7 @@ class RequestHandleThread(threading.Thread):
 
     def get(self):
         with self.read_write_lock:
-            if not len(self.queue):
+            if not self.queue:
                 with self.wait_lock:
                     # 先释放掉读写锁，可以让别人能够put数据
                     self.read_write_lock.release()
@@ -32,11 +32,11 @@ class RequestHandleThread(threading.Thread):
     def put(self, data):
         with self.read_write_lock:
             # 拿到等待锁，如果有等待中，那么
-            self.wait_lock.acquire(blocking=False)
             self.queue.append(data)
 
             # 不管自己时候拿到了lock，都直接release
-            self.wait_lock.release()
+            if self.wait_lock.locked():
+                self.wait_lock.release()
 
     def run(self):
         while True:
