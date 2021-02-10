@@ -1,7 +1,8 @@
 import asyncore
+import threading
 
 
-class BaseSocketHandler(asyncore.dispatcher):
+class SocketHandler(asyncore.dispatcher):
     # x kb
     # 一次最多接受的数据大小
     MAX_RECV_SIZE = 256 * 1024
@@ -12,6 +13,9 @@ class BaseSocketHandler(asyncore.dispatcher):
 
         # 接受缓冲区
         self._recv_buffer = bytearray()
+        # 写锁、发送缓冲区
+        self._send_buffer = bytearray()
+        self.write_lock = threading.Lock()
 
     @property
     def client(self):
@@ -22,22 +26,46 @@ class BaseSocketHandler(asyncore.dispatcher):
         self._client = value
 
     def handle_read(self):
-        self._handle_read()
+        data = self.recv(self.MAX_RECV_SIZE)
+        self._recv_buffer.extend(data)
+
         if self._client:
-            self._client.handle_data(self._recv_buffer)
+            self._client.handle_read(self._recv_buffer)
 
         # 清空接受缓冲区的数据
         self.clear_recv_buffer()
 
-    def _handle_read(self):
-        data = self.recv(self.MAX_RECV_SIZE)
-        self._recv_buffer.extend(data)
+    def handle_write(self):
+        if not self._send_buffer:
+            return
+
+        with self.write_lock:
+            self.send(self._send_buffer)
+            self.clear_send_buffer()
+
+    def writable(self):
+        return len(self._send_buffer) > 0
+
+    def send_data(self, data: bytearray):
+        """发送数据"""
+        with self.write_lock:
+            self._send_buffer.extend(data)
+
+    def handle_close(self):
+        # 客户端关闭连接的时候会调用
+        # 不知道为啥，这里会被调用2次，所以这里要处理一下，不能走两次回到哦
+        if self._client:
+            self._client.handle_close()
+        self.close()
 
     def clear_recv_buffer(self):
         self._recv_buffer.clear()
 
+    def clear_send_buffer(self):
+        self._send_buffer.clear()
 
-class BaseSocketServer(asyncore.dispatcher):
+
+class SocketServer(asyncore.dispatcher):
     def __init__(self, addr, backlog, server=None):
         asyncore.dispatcher.__init__(self)
         self.create_socket()
@@ -49,7 +77,8 @@ class BaseSocketServer(asyncore.dispatcher):
         self._server = server
 
     def handle_accepted(self, sock, addr):
-        handler = BaseSocketHandler(sock)
+        # 收到socket连接后创建一个连接对象
+        handler = SocketHandler(sock)
         self._server.new_client(handler)
 
     def set_server(self, server):

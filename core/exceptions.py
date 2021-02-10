@@ -1,0 +1,3 @@
+
+class DuplicateRegisterHandler(Exception):
+    pass
