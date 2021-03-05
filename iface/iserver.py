@@ -3,6 +3,7 @@ from typing import Dict
 from abc import ABCMeta, abstractmethod
 
 from .iconnnection import ISocketConnection
+from .iroute import IRoute
 
 
 class IServer(asyncore.dispatcher, metaclass=ABCMeta):
@@ -28,6 +29,10 @@ class IServer(asyncore.dispatcher, metaclass=ABCMeta):
 
     @abstractmethod
     def remove_conn(self, cid: int):
+        pass
+
+    @abstractmethod
+    def add_route(self, msg_id: int, route: IRoute):
         pass
 
     @abstractmethod

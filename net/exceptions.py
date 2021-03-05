@@ -1,3 +1,3 @@
 
-class DuplicateRegisterHandler(Exception):
+class DuplicateRouteError(Exception):
     pass

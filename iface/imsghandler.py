@@ -1,9 +1,9 @@
 import threading
-from types import FunctionType
 from typing import List
 from abc import abstractmethod
 
-from .iprotocol import IRequest, IResponse
+from .iprotocol import IRequest
+from .iroute import IRoute
 
 
 class IMsgHandler:
@@ -13,7 +13,7 @@ class IMsgHandler:
         pass
 
     @abstractmethod
-    def add_route(self, route_id: int, handler: FunctionType):
+    def add_route(self, msg_id: int, route: IRoute):
         pass
 
     @abstractmethod
