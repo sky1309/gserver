@@ -1,0 +1,3 @@
+
+class DuplicateRouteError(Exception):
+    pass
