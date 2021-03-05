@@ -1,5 +1,5 @@
 import asyncore
-from typing import Dict
+from typing import Dict, Callable
 from abc import ABCMeta, abstractmethod
 
 from .iconnnection import ISocketConnection
@@ -25,6 +25,24 @@ class IServer(asyncore.dispatcher, metaclass=ABCMeta):
 
     @abstractmethod
     def add_conn(self, conn: ISocketConnection):
+        pass
+
+    @abstractmethod
+    def call_on_conn_start(self, conn: ISocketConnection):
+        # 链接创建时
+        pass
+
+    @abstractmethod
+    def set_on_conn_start(self, func: Callable[[ISocketConnection], None]):
+        pass
+
+    @abstractmethod
+    def call_on_conn_close(self, conn: ISocketConnection):
+        # 链接断开时
+        pass
+
+    @abstractmethod
+    def set_on_conn_close(self, func: Callable[[ISocketConnection], None]):
         pass
 
     @abstractmethod
