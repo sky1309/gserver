@@ -1,10 +1,12 @@
 import threading
-from typing import List
-from types import FunctionType
+from typing import List, Dict
 from collections import deque
 
 from iface import IRequest
 from iface.imsghandler import IMsgHandler
+from iface.iroute import IRoute
+from net.common import log
+from net.exceptions import DuplicateRouteError
 
 
 class MsgHandler(IMsgHandler):
@@ -13,6 +15,9 @@ class MsgHandler(IMsgHandler):
         self._routes = dict()
         self._max_worker = max_worker
         self._thread_pool: List[ThreadHandler] = list()
+
+        # 路由映射关系 map[int]IRoute
+        self._routes = dict()
 
         # 是否已经初始化了
         self._is_init = False
@@ -23,8 +28,10 @@ class MsgHandler(IMsgHandler):
             worker_index = request.get_conn().get_cid() % self.get_max_worker()
             self._thread_pool[worker_index].put_requests(request)
 
-    def add_route(self, route_id: int, handler: FunctionType):
-        self._routes[route_id] = handler
+    def add_route(self, msg_id: int, route: IRoute):
+        if msg_id in self._routes:
+            raise DuplicateRouteError("duplicate route error, msg id", msg_id)
+        self._routes[msg_id] = route
 
     def get_max_worker(self) -> int:
         return self._max_worker
@@ -44,7 +51,7 @@ class MsgHandler(IMsgHandler):
             return
 
         for _ in range(self._max_worker):
-            t = ThreadHandler()
+            t = ThreadHandler(self._routes)
             t.setDaemon(True)
             self._thread_pool.append(t)
 
@@ -57,14 +64,15 @@ class MsgHandler(IMsgHandler):
 
 class ThreadHandler(threading.Thread):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, routes: Dict[int, IRoute], *args, **kwargs):
         super(ThreadHandler, self).__init__(*args, **kwargs)
 
         self._requests_queue = deque()
-
         self._lock = threading.Lock()
-
         self._cond = threading.Condition()
+
+        # 路由数据map[int]IRoute
+        self._routes = routes
 
         # 是否已经开启的状态
         self._is_open = True
@@ -108,6 +116,12 @@ class ThreadHandler(threading.Thread):
     def handle(self, request: IRequest):
         """处理请求的逻辑"""
         print("[thread handle]", request)
+        route = self._routes.get(request.get_msg_id())
+        if not route:
+            log.warning("not find route msg id: {}".format(request.get_msg_id()))
+            return
+
+        route.do(request)
 
     def close(self):
         """关闭"""

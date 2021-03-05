@@ -2,9 +2,11 @@ import asyncore
 import threading
 from typing import Dict
 from iface.imsghandler import IMsgHandler
+from iface.iroute import IRoute
 from iface.iserver import IServer
 from iface.iconnnection import ISocketConnection
 from .common import log
+from .exceptions import DuplicateRouteError
 from .connection import SocketConnection
 
 
@@ -19,9 +21,10 @@ class Server(IServer):
         self._conn_id_lock = threading.Lock()
 
         # 管理的连接id
-        self._global_client_id = 0
+        self._global_conn_id = 0
         # 所有的连接 map[int]ISocketConnection
         self._conns = dict()
+
         # 消息处理
         self._msg_handler = msg_handler
 
@@ -31,8 +34,8 @@ class Server(IServer):
     def gen_conn_id(self):
         """生成client的id，id是递增的"""
         with self._conn_id_lock:
-            self._global_client_id += 1
-            d = self._global_client_id
+            self._global_conn_id += 1
+            d = self._global_conn_id
         return d
 
     def get_conns(self) -> Dict[int, ISocketConnection]:
@@ -46,6 +49,10 @@ class Server(IServer):
         with self._conns_lock:
             # 这里 self.clients 里面的删除以后，WeakValueDictionary 里面的client会直接没掉
             self._conns.pop(cid, None)
+
+    def add_route(self, msg_id: int, route: IRoute):
+        """添加路由"""
+        self._msg_handler.add_route(msg_id, route)
 
     def handle_accepted(self, sock, addr):
         # 收到socket连接后创建一个连接对象

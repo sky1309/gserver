@@ -45,7 +45,7 @@ class SocketConnection(ISocketConnection):
 
     def handle_read(self):
         """读取数据的时候"""
-        print("[handle read] ...")
+        print("[conn handle read] ...")
         requests = list()
 
         try_count = 0
@@ -53,7 +53,7 @@ class SocketConnection(ISocketConnection):
             # 没有需要接受接受的数据了，跳过
             self._read_data()
             if not self.get_recv_buffer_size() or try_count > self.MAX_HANDLE_TRY:
-                print("[break] handle read loop.")
+                print("[break] conn handle read loop.")
                 break
 
             request: Request
@@ -71,7 +71,7 @@ class SocketConnection(ISocketConnection):
             requests.append(request)
             # 如果 requests 中量很大了，先扔到处理的队列中去
             if len(requests) >= self.MAX_REQUEST_LIST_SIZE:
-                print("[full] requests if full: size=", len(requests))
+                print("[full] conn requests if full: size=", len(requests))
                 self._msg_handler.add_to_task_queue(*requests)
                 requests = list()
 
@@ -98,7 +98,8 @@ class SocketConnection(ISocketConnection):
     def handle_close(self):
         # 客户端关闭连接的时候会调用
         # 不知道为啥，这里会被调用2次，所以这里要处理一下，不能走两次回到哦
-        pass
+        self.close()
+        print("[close] conn close.")
 
     def get_recv_buffer_size(self):
         return len(self._recv_buffer)
