@@ -1,19 +1,13 @@
-from iface import IClient, ISocketConnection
+from iface import ISocketConnection
+from iface.iclient import IClient
 
 
 class Client(IClient):
-
-    def __init__(self, cid: int, conn: ISocketConnection):
-        """初始化
-        """
-        self._cid: int = cid
-
+    def __init__(self, conn: ISocketConnection):
         self._conn = conn
 
-        self._is_close = False
+    def get_conn(self) -> ISocketConnection:
+        return self._conn
 
-    def get_cid(self) -> int:
-        return self._cid
-
-    def set_cid(self, cid: int):
-        self._cid = cid
+    def set_conn(self, conn: ISocketConnection):
+        self._conn = conn

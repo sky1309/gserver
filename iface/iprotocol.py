@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from .iconnnection import ISocketConnection
 
 
 class IRequest(metaclass=ABCMeta):
@@ -11,7 +12,11 @@ class IRequest(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_client(self):
+    def get_conn(self) -> ISocketConnection:
+        pass
+
+    @abstractmethod
+    def set_conn(self, conn: ISocketConnection):
         pass
 
 

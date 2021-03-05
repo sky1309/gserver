@@ -1,26 +1,44 @@
-import json
 import struct
 from dataclasses import dataclass
 
 from dataclasses_json import dataclass_json
 from marshmallow import fields, schema, utils as marshmallow_utils
 
-from .client import Client
+from iface.iconnnection import ISocketConnection
+from iface.iprotocol import IRequest, IResponse
 
 
 @dataclass_json
 @dataclass
-class Request:
+class Request(IRequest):
     msg_id: int
     d: bytearray
-    client: Client
+    conn: ISocketConnection = None
+
+    def get_msg_id(self) -> int:
+        return self.msg_id
+
+    def get_d(self) -> bytearray:
+        return self.d
+
+    def get_conn(self) -> ISocketConnection:
+        return self.conn
+
+    def set_conn(self, conn: ISocketConnection):
+        self.conn = conn
 
 
 @dataclass_json
 @dataclass
-class Response:
+class Response(IResponse):
     msg_id: int
     d: bytearray
+
+    def get_msg_id(self) -> int:
+        return self.msg_id
+
+    def get_d(self) -> bytearray:
+        return self.d
 
 
 class SocketProtocol:
@@ -61,7 +79,7 @@ class SocketProtocol:
         if data_length < end_index:
             return None, -1
 
-        return Response(msg_id, bytes_data[head_length:end_index]), end_index
+        return Request(msg_id, bytes_data[head_length:end_index]), end_index
 
     def get_head_len(self):
         """获取协议头的长度
