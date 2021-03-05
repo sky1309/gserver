@@ -7,7 +7,7 @@ tcp游戏echo服务器，客户端发送服务器指定格式的数据格式，�
 ```python
 # Server
 
-from core import server
+from net import server
 
 s = server.Server(("127.0.0.1", 8000), 5)
 
@@ -27,7 +27,7 @@ if __name__ == '__main__':
 # Client
 
 import socket
-from core.server import Server
+from net.server import Server
 
 protocol = Server.get_default_protocol_ins()
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
