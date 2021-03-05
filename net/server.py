@@ -1,12 +1,12 @@
 import asyncore
 import threading
-from typing import Dict
+from typing import Dict, Callable
+
 from iface.imsghandler import IMsgHandler
 from iface.iroute import IRoute
 from iface.iserver import IServer
 from iface.iconnnection import ISocketConnection
 from .common import log
-from .exceptions import DuplicateRouteError
 from .connection import SocketConnection
 
 
@@ -31,6 +31,9 @@ class Server(IServer):
         # 是否已经关闭
         self._is_close = False
 
+        self._on_conn_start = None
+        self._on_conn_close = None
+
     def gen_conn_id(self):
         """生成client的id，id是递增的"""
         with self._conn_id_lock:
@@ -54,11 +57,29 @@ class Server(IServer):
         """添加路由"""
         self._msg_handler.add_route(msg_id, route)
 
+    def call_on_conn_start(self, conn: ISocketConnection):
+        # 链接创建时
+        if self._on_conn_start:
+            self._on_conn_start(conn)
+
+    def set_on_conn_start(self, func: Callable[[ISocketConnection], None]):
+        self._on_conn_start = func
+
+    def call_on_conn_close(self, conn: ISocketConnection):
+        # 链接断开时
+        if self._on_conn_close:
+            self._on_conn_close(conn)
+
+    def set_on_conn_close(self, func: Callable[[ISocketConnection], None]):
+        self._on_conn_close = func
+
     def handle_accepted(self, sock, addr):
         # 收到socket连接后创建一个连接对象
         cid = self.gen_conn_id()
-        conn = SocketConnection(cid, self._msg_handler, sock)
+        conn = SocketConnection(self, cid, self._msg_handler, sock)
         self.add_conn(conn)
+        # 调用链接创建时的函数
+        self.call_on_conn_start(conn)
 
     def serve_forever(self):
         log.info("serve start: {}".format(self.addr))

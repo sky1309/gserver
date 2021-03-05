@@ -6,18 +6,33 @@ tcp游戏echo服务器，客户端发送服务器指定格式的数据格式，�
 
 ```python
 # Server
-
+from iface import IRequest
 from net import server
+from iface.iconnnection import ISocketConnection
 
-s = server.Server(("127.0.0.1", 8000), 5)
+from net.msghandler import MsgHandler
+from net.route import BaseRoute
 
 
-@s.route("hello_world")
-def hello_world(request):
-    request.client.send({
-        "c": "hello world."
-    })
+class Route(BaseRoute):
+    def handle(self, request: IRequest):
+        print('route handle', request)
 
+
+def on_start(conn: ISocketConnection):
+    print("on start", conn)
+
+
+def on_close(conn: ISocketConnection):
+    print("on close", conn)
+
+
+if __name__ == '__main__':
+    s = server.Server(("127.0.0.1", 8000), 5, MsgHandler())
+    s.add_route(1, Route())
+    s.set_on_conn_start(on_start)
+    s.set_on_conn_close(on_close)
+    s.serve_forever()
 
 if __name__ == '__main__':
     s.serve_forever()
@@ -26,11 +41,12 @@ if __name__ == '__main__':
 ```python
 # Client
 import socket
-from net.server import Server
+import json
+import struct
 
-protocol = Server.get_default_protocol_ins()
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect(("127.0.0.1",8000))
-s.send(protocol.pack_data({"c": "hello_world", "d": {}}))
-print(s.recv(1024))
+ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+ss.connect(("127.0.0.1", 8000))
+st = struct.Struct(">I")
+d = json.dumps({"c": "hello_world", "d": {}}).encode()
+ss.send(st.pack(len(d)) + st.pack(1) + d)
 ```

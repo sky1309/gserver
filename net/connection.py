@@ -1,6 +1,6 @@
 import threading
 
-from iface import IRequest
+from iface import IRequest, IServer
 from iface.iconnnection import ISocketConnection
 from iface.imsghandler import IMsgHandler
 from .protocol import default_socket_protocol
@@ -15,11 +15,12 @@ class SocketConnection(ISocketConnection):
     # 如果同时玩家的请求书很多的时候，先扔到处理队列中去
     MAX_REQUEST_LIST_SIZE = 100
 
-    def __init__(self, cid, msg_handler: IMsgHandler, sock=None, *args, **kwargs):
+    def __init__(self, server: IServer, cid, msg_handler: IMsgHandler, sock=None, *args, **kwargs):
         super().__init__(sock, *args, **kwargs)
 
         # 链接id
         self._cid = cid
+        self._server = server
 
         # 接受缓冲区
         self._recv_buffer = bytearray()
@@ -99,6 +100,8 @@ class SocketConnection(ISocketConnection):
         # 客户端关闭连接的时候会调用
         # 不知道为啥，这里会被调用2次，所以这里要处理一下，不能走两次回到哦
         self.close()
+        # 关闭的处理函数
+        self._server.call_on_conn_close(self)
         print("[close] conn close.")
 
     def get_recv_buffer_size(self):
