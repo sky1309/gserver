@@ -5,8 +5,8 @@ from collections import deque
 from iface import IRequest
 from iface.imsghandler import IMsgHandler
 from iface.iroute import IRoute
-from net.common import log
-from net.exceptions import DuplicateRouteError
+from util.common import log
+from util.exceptions import DuplicateRouteError
 
 
 class MsgHandler(IMsgHandler):

@@ -2,7 +2,7 @@ import threading
 from typing import List
 from abc import abstractmethod
 
-from .iprotocol import IRequest
+from .iconnnection import IRequest
 from .iroute import IRoute
 
 

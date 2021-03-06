@@ -4,15 +4,20 @@ from iface.iconnnection import ISocketConnection
 
 from net.msghandler import MsgHandler
 from net.route import BaseRoute
+from net.protocol import Response
 
 
 class Route(BaseRoute):
     def handle(self, request: IRequest):
         print('route handle', request)
+        request.get_conn().send_data(bytes(b"hello world!\n"))
+        response = Response(1, bytes(b"response: z x c v b n m.\n"))
+        request.get_conn().send_msg(response)
 
 
 def on_start(conn: ISocketConnection):
     print("on start", conn)
+    conn.send_data(bytes(b"conn on start\n"))
 
 
 def on_close(conn: ISocketConnection):
