@@ -58,25 +58,33 @@ class Server(IServer):
             # 这里 self.clients 里面的删除以后，WeakValueDictionary 里面的client会直接没掉
             self._conns.pop(cid, None)
 
+    def handle_conn_close(self, conn: ISocketConnection):
+        """如果客户端断开了链接
+        """
+        # 调用关闭回调函数
+        self.call_on_conn_close(conn)
+        # 移除客户端
+        self.remove_conn(conn.get_cid())
+
     def add_route(self, msg_id: int, route: IRoute):
         """添加路由"""
         self._msg_handler.add_route(msg_id, route)
+
+    def set_on_conn_start(self, func: Callable[[ISocketConnection], None]):
+        self._on_conn_start = func
+
+    def set_on_conn_close(self, func: Callable[[ISocketConnection], None]):
+        self._on_conn_close = func
 
     def call_on_conn_start(self, conn: ISocketConnection):
         # 链接创建时
         if self._on_conn_start:
             self._on_conn_start(conn)
 
-    def set_on_conn_start(self, func: Callable[[ISocketConnection], None]):
-        self._on_conn_start = func
-
     def call_on_conn_close(self, conn: ISocketConnection):
-        # 链接断开时
+        # conn 客户端链接断开时，调用的方法
         if self._on_conn_close:
             self._on_conn_close(conn)
-
-    def set_on_conn_close(self, func: Callable[[ISocketConnection], None]):
-        self._on_conn_close = func
 
     def handle_accepted(self, sock, addr):
         # 收到socket连接后创建一个连接对象
@@ -84,6 +92,10 @@ class Server(IServer):
         conn = SocketConnection(self, cid, self._msg_handler, sock)
         conn.set_socket_protocol(self._protocol)
 
+        conn_str = "\n*** new conn: cid: {}, addr: {} ***\n".format(cid, conn.addr)
+        print("-" * len(conn_str), conn_str + "-" * len(conn_str))
+
+        # 添加一个新的连接
         self.add_conn(conn)
         # 调用链接创建时的函数
         self.call_on_conn_start(conn)
