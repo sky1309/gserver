@@ -1,6 +1,6 @@
 import threading
 
-from iface import IRequest, IServer
+from iface import IRequest, IResponse, IServer, ISocketProtocol
 from iface.iconnnection import ISocketConnection
 from iface.imsghandler import IMsgHandler
 from .protocol import default_socket_protocol
@@ -23,8 +23,8 @@ class SocketConnection(ISocketConnection):
         self._server = server
 
         # 接受缓冲区
-        self._recv_buffer = bytearray()
-        self._send_buffer = bytearray()
+        self._recv_buffer = bytes()
+        self._send_buffer = bytes()
         # 写锁、发送缓冲区
         self.read_lock = threading.Lock()
         self.write_lock = threading.Lock()
@@ -35,11 +35,16 @@ class SocketConnection(ISocketConnection):
         self.c = 0
         self._msg_handler = msg_handler
 
+        # 是否已经关闭
+        self._is_close = False
+
+        self._protocol = None
+
     def _read_data(self):
         try:
             data = self.recv(self.MAX_RECV_SIZE)
             with self.read_lock:
-                self._recv_buffer.extend(data)
+                self._recv_buffer += data
         except BlockingIOError as e:
             # print("[conn read data err] ", e)
             pass
@@ -57,7 +62,7 @@ class SocketConnection(ISocketConnection):
                 print("[break] conn handle read loop.")
                 break
 
-            request: Request
+            request: IRequest
             request, offset = self.protocol.unpack(self._recv_buffer)
             if offset < 0 or not request:
                 try_count += 1
@@ -84,21 +89,28 @@ class SocketConnection(ISocketConnection):
         if not self._send_buffer:
             return
 
+        # 计算字节数
+        send = self.send(self._send_buffer)
         with self.write_lock:
-            self.send(self._send_buffer)
-            self._send_buffer.clear()
+            self._send_buffer = self._send_buffer[send:]
 
     def writable(self):
         return len(self._send_buffer) > 0
 
-    def send_data(self, data: bytearray):
+    def send_data(self, data: bytes):
         """发送数据"""
         with self.write_lock:
-            self._send_buffer.extend(data)
+            self._send_buffer += data
+
+    def send_msg(self, response: IResponse):
+        """发送response格式的数据"""
+        data = self.get_socket_protocol().pack(response)
+        self.send_data(data)
 
     def handle_close(self):
         # 客户端关闭连接的时候会调用
         # 不知道为啥，这里会被调用2次，所以这里要处理一下，不能走两次回到哦
+        self._is_close = True
         self.close()
         # 关闭的处理函数
         self._server.call_on_conn_close(self)
@@ -116,21 +128,8 @@ class SocketConnection(ISocketConnection):
     def set_cid(self, cid: int):
         self._cid = cid
 
+    def get_socket_protocol(self) -> ISocketProtocol:
+        return self._protocol
 
-class Request(IRequest):
-    def __init__(self, msg_id: int, conn: ISocketConnection, data: bytearray):
-        self._msg_id = msg_id
-        self._conn = conn
-        self._d = data
-
-    def get_msg_id(self) -> int:
-        return self._msg_id
-
-    def get_d(self) -> bytearray:
-        return self._d
-
-    def get_conn(self) -> ISocketConnection:
-        return self._conn
-
-    def set_conn(self, conn: ISocketConnection):
-        self._conn = conn
+    def set_socket_protocol(self, protocol: ISocketProtocol):
+        self._protocol = protocol

@@ -6,8 +6,9 @@ from iface.imsghandler import IMsgHandler
 from iface.iroute import IRoute
 from iface.iserver import IServer
 from iface.iconnnection import ISocketConnection
-from .common import log
+from util.common import log
 from .connection import SocketConnection
+from .protocol import default_socket_protocol
 
 
 class Server(IServer):
@@ -31,8 +32,12 @@ class Server(IServer):
         # 是否已经关闭
         self._is_close = False
 
+        # 创建、断开连接时的hook函数
         self._on_conn_start = None
         self._on_conn_close = None
+
+        # 传输的数据协议
+        self._protocol = default_socket_protocol()
 
     def gen_conn_id(self):
         """生成client的id，id是递增的"""
@@ -77,6 +82,8 @@ class Server(IServer):
         # 收到socket连接后创建一个连接对象
         cid = self.gen_conn_id()
         conn = SocketConnection(self, cid, self._msg_handler, sock)
+        conn.set_socket_protocol(self._protocol)
+
         self.add_conn(conn)
         # 调用链接创建时的函数
         self.call_on_conn_start(conn)
@@ -85,7 +92,7 @@ class Server(IServer):
         log.info("serve start: {}".format(self.addr))
         self._msg_handler.start()
         try:
-            asyncore.loop()
+            asyncore.loop(0.01)
         except KeyboardInterrupt:
             self.serve_stop()
 

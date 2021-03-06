@@ -2,23 +2,22 @@ import struct
 from dataclasses import dataclass
 
 from dataclasses_json import dataclass_json
-from marshmallow import fields, schema, utils as marshmallow_utils
 
 from iface.iconnnection import ISocketConnection
-from iface.iprotocol import IRequest, IResponse
+from iface import IResponse, IRequest
 
 
 @dataclass_json
 @dataclass
 class Request(IRequest):
     msg_id: int
-    d: bytearray
+    d: bytes
     conn: ISocketConnection = None
 
     def get_msg_id(self) -> int:
         return self.msg_id
 
-    def get_d(self) -> bytearray:
+    def get_d(self) -> bytes:
         return self.d
 
     def get_conn(self) -> ISocketConnection:
@@ -32,12 +31,12 @@ class Request(IRequest):
 @dataclass
 class Response(IResponse):
     msg_id: int
-    d: bytearray
+    d: bytes
 
     def get_msg_id(self) -> int:
         return self.msg_id
 
-    def get_d(self) -> bytearray:
+    def get_d(self) -> bytes:
         return self.d
 
 
@@ -60,7 +59,7 @@ class SocketProtocol:
         msg_len = self.struct.pack(len(response.d))
         return msg_len + self.msg_id_struct.pack(response.msg_id) + response.d
 
-    def unpack(self, bytes_data) -> (Request, int):
+    def unpack(self, bytes_data) -> (IRequest, int):
         """解析接收到的数据"""
         data_length = len(bytes_data)
         head_length = self.get_head_len()
@@ -87,18 +86,6 @@ class SocketProtocol:
         return self.struct.size + self.msg_id_struct.size
 
 
-class ProtocolMsg(schema.Schema):
-    # 数据传输的结构
-
-    # command 指令 协议id
-    # msg_id = fields.Integer(required=True)
-    # data 数据
-    d = fields.Mapping(required=True)
-
-    class Meta:
-        unknown = marshmallow_utils.EXCLUDE
-
-
 def default_socket_protocol():
     """默认情况下的协议数据结构
        part1    part2     part3
@@ -109,13 +96,3 @@ def default_socket_protocol():
       part3: msg的数据，长度为part1 4个字节的的值
     """
     return SocketProtocol()
-
-
-class ProtocolResponseStruct(schema.Schema):
-    # command 指令
-    c = fields.String(required=True, validate=lambda k: len(k) > 0)
-    # data 数据
-    d = fields.Mapping()
-    # 状态码
-    s = fields.Integer()
-

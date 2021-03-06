@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-from .iprotocol import IRequest
+from .iconnnection import IRequest
 
 
 class IRoute(metaclass=ABCMeta):

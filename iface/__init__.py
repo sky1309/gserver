@@ -1,3 +1,4 @@
 from .iserver import IServer
-from .iconnnection import ISocketConnection
-from .iprotocol import IRequest, IResponse, ISocketProtocol
+from .iconnnection import ISocketConnection, IRequest
+from .iprotocol import ISocketProtocol
+from .iresponse import IResponse
