@@ -50,6 +50,11 @@ class IServer(asyncore.dispatcher, metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def handle_conn_close(self, conn: ISocketConnection):
+        # server 的某个conn断开后的调用
+        pass
+
+    @abstractmethod
     def add_route(self, msg_id: int, route: IRoute):
         pass
 
