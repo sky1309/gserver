@@ -23,7 +23,6 @@ class MsgHandler(IMsgHandler):
         self._is_init = False
 
     def add_to_task_queue(self, *requests: IRequest):
-        print("add_to_request_queue", len(requests), requests)
         for request in requests:
             worker_index = request.get_conn().get_cid() % self.get_max_worker()
             self._thread_pool[worker_index].put_requests(request)
@@ -50,8 +49,8 @@ class MsgHandler(IMsgHandler):
             print("[msg handler] is staring!")
             return
 
-        for _ in range(self._max_worker):
-            t = ThreadHandler(self._routes)
+        for tid in range(self._max_worker):
+            t = ThreadHandler(tid, self._routes)
             t.setDaemon(True)
             self._thread_pool.append(t)
 
@@ -64,7 +63,7 @@ class MsgHandler(IMsgHandler):
 
 class ThreadHandler(threading.Thread):
 
-    def __init__(self, routes: Dict[int, IRoute], *args, **kwargs):
+    def __init__(self, tid, routes: Dict[int, IRoute], *args, **kwargs):
         super(ThreadHandler, self).__init__(*args, **kwargs)
 
         self._requests_queue = deque()
@@ -76,8 +75,10 @@ class ThreadHandler(threading.Thread):
 
         # 是否已经开启的状态
         self._is_open = True
+        self._tid = tid
 
     def run(self):
+        print("[thread handler {}] running!".format(self._tid))
         self._cond.acquire()
         while self._is_open or len(self._requests_queue) > 0:
             request, find = self.get_request()
@@ -115,7 +116,6 @@ class ThreadHandler(threading.Thread):
 
     def handle(self, request: IRequest):
         """处理请求的逻辑"""
-        print("[thread handle]", request)
         route = self._routes.get(request.get_msg_id())
         if not route:
             log.warning("not find route msg id: {}".format(request.get_msg_id()))
@@ -126,7 +126,7 @@ class ThreadHandler(threading.Thread):
     def close(self):
         """关闭"""
         self._is_open = True
-        print("[thread handler] close.")
+        print("[thread handler {} ] closed.".format(self._tid))
 
     def notify(self):
         """notify threading ready to exec request"""
