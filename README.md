@@ -43,15 +43,15 @@ if __name__ == '__main__':
 ```
 
 ```python
-# Client
+# test client
 import socket
-import json
-import struct
 
+from net.protocol import Response, SocketProtocol
+
+protocol = SocketProtocol()
 ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 ss.connect(("127.0.0.1", 8000))
-st = struct.Struct(">I")
-d = json.dumps({"c": "hello_world", "d": {}}).encode()
-ss.send(st.pack(len(d)) + st.pack(1) + d)
+
+ss.send(protocol.pack(Response(1, b"send data...")))
 ss.recv(1024)
 ```
