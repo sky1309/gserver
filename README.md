@@ -1,4 +1,4 @@
-# sample-game-server
+# simple-game-server
 tcp游戏服务器，客户端发送服务器指定格式的数据格式，服务端解析出协议号，分发到不同的路由中
 
 ## Protocol(协议)
