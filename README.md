@@ -1,15 +1,35 @@
 # sample-game-server
-tcp游戏echo服务器，客户端发送服务器指定格式的数据格式，服务器获取对应的协议号，走不同的逻辑函数
+tcp游戏服务器，客户端发送服务器指定格式的数据格式，服务端解析出协议号，分发到不同的路由中
 
+## Protocol(协议)
+```
+  3 parts
+    - 4 byte msg length
+    - 4 byte msg id
+    - msg body
 
-## Start
+-------------------------------------------------------------------------
+  4 byte msg length       4 byte msg id(route id)           msg
+     [][][][]                 [][][][]                  [][][]....[][][]
+-------------------------------------------------------------------------
+```
 
+## Quick Start
+
+### Install
+    git clone https://github.com/prillc/simple-game-server.git
+
+    cd simple-game-server
+    
+    pipenv sync
+
+### Usage
 ```python
-#  Server
+# Server
 from iface import IRequest
-from net import server
 from iface.iconnnection import ISocketConnection
 
+from net import server
 from net.msghandler import MsgHandler
 from net.route import BaseRoute
 from net.protocol import Response
@@ -39,11 +59,10 @@ if __name__ == '__main__':
     s.set_on_conn_close(on_close)
     s.serve_forever()
 
-
 ```
 
 ```python
-# test client
+# Test Python Client
 import socket
 
 from net.protocol import Response, SocketProtocol
@@ -54,4 +73,5 @@ ss.connect(("127.0.0.1", 8000))
 
 ss.send(protocol.pack(Response(1, b"send data...")))
 ss.recv(1024)
+
 ```
