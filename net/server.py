@@ -92,7 +92,7 @@ class Server(IServer):
         conn = SocketConnection(self, cid, self._msg_handler, sock)
         conn.set_socket_protocol(self._protocol)
 
-        conn_str = "\n*** new conn: cid: {}, addr: {} ***\n".format(cid, conn.addr)
+        conn_str = "\n*** new conn: cid: {}, addr: {} ***\n".format(cid, addr)
         print("-" * len(conn_str), conn_str + "-" * len(conn_str))
 
         # 添加一个新的连接
@@ -102,6 +102,7 @@ class Server(IServer):
 
     def serve_forever(self):
         log.info("serve start: {}".format(self.addr))
+        self._start_serve()
         self._msg_handler.start()
         try:
             asyncore.loop(0.01)
