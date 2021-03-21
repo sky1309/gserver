@@ -10,10 +10,15 @@ class IServer(asyncore.dispatcher, metaclass=ABCMeta):
     # 监听端口的socket服务
     def __init__(self, addr, backlog):
         asyncore.dispatcher.__init__(self)
+        self.addr = addr
+        self.backlog = backlog
+
+    def _start_serve(self):
+        """start listen"""
         self.create_socket()
         self.set_reuse_addr()
-        self.bind(addr)
-        self.listen(backlog)
+        self.bind(self.addr)
+        self.listen(self.backlog)
 
     @abstractmethod
     def gen_conn_id(self) -> int:

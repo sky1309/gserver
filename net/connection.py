@@ -1,8 +1,11 @@
 import threading
 
+from util.common import log
+
 from iface import IRequest, IResponse, IServer, ISocketProtocol
 from iface.iconnnection import ISocketConnection
 from iface.imsghandler import IMsgHandler
+
 from .protocol import default_socket_protocol
 
 
@@ -30,7 +33,7 @@ class SocketConnection(ISocketConnection):
         self.write_lock = threading.Lock()
 
         # protocol
-        self.protocol = default_socket_protocol()
+        self._protocol = default_socket_protocol()
 
         self.c = 0
         self._msg_handler = msg_handler
@@ -38,20 +41,18 @@ class SocketConnection(ISocketConnection):
         # 是否已经关闭
         self._is_close = False
 
-        self._protocol = None
-
     def _read_data(self):
         try:
             data = self.recv(self.MAX_RECV_SIZE)
             with self.read_lock:
                 self._recv_buffer += data
-        except BlockingIOError as e:
+        except BlockingIOError:
             # print("[conn read data err] ", e)
             pass
 
     def handle_read(self):
         """读取数据的时候"""
-        print("[conn {}] handle read...".format(self._cid))
+        log.info("[conn {}] handle read...".format(self._cid))
         requests = list()
 
         try_count = 0
@@ -63,7 +64,7 @@ class SocketConnection(ISocketConnection):
                 break
 
             request: IRequest
-            request, offset = self.protocol.unpack(self._recv_buffer)
+            request, offset = self._protocol.unpack(self._recv_buffer)
             if offset < 0 or not request:
                 try_count += 1
                 return
