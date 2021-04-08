@@ -1,4 +1,3 @@
-import threading
 from typing import Dict
 
 from iface import IServer, IConnectionOperator, ISocketConnection

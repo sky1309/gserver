@@ -1,13 +1,15 @@
 import asyncore
 import threading
-from typing import Dict, Callable, Optional
+from typing import Dict, Callable
+
+from util.common import log
 
 from iface import IConnectionOperator
 from iface.imsghandler import IMsgHandler
 from iface.iroute import IRoute
 from iface.iserver import IServer
 from iface.iconnnection import ISocketConnection
-from util.common import log
+
 from .connection import SocketConnection
 from .protocol import default_socket_protocol
 
