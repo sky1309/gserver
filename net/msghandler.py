@@ -2,11 +2,13 @@ import threading
 from typing import List, Dict
 from collections import deque
 
+
+from util.common import log
+from util.exceptions import DuplicateRouteError
+
 from iface import IRequest
 from iface.imsghandler import IMsgHandler
 from iface.iroute import IRoute
-from util.common import log
-from util.exceptions import DuplicateRouteError
 
 
 class MsgHandler(IMsgHandler):

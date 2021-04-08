@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 
 from .iconnnection import ISocketConnection
 from .iroute import IRoute
+from .iconnoperator import IConnectionOperator
 
 
 class IServer(asyncore.dispatcher, metaclass=ABCMeta):
@@ -61,6 +62,10 @@ class IServer(asyncore.dispatcher, metaclass=ABCMeta):
 
     @abstractmethod
     def add_route(self, msg_id: int, route: IRoute):
+        pass
+
+    @abstractmethod
+    def set_connoperator(self, value: IConnectionOperator):
         pass
 
     @abstractmethod

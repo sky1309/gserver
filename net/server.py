@@ -2,11 +2,14 @@ import asyncore
 import threading
 from typing import Dict, Callable
 
+from util.common import log
+
+from iface import IConnectionOperator
 from iface.imsghandler import IMsgHandler
 from iface.iroute import IRoute
 from iface.iserver import IServer
 from iface.iconnnection import ISocketConnection
-from util.common import log
+
 from .connection import SocketConnection
 from .protocol import default_socket_protocol
 
@@ -25,6 +28,8 @@ class Server(IServer):
         self._global_conn_id = 0
         # 所有的连接 map[int]ISocketConnection
         self._conns = dict()
+        # 连接操作
+        self._connoperator = None
 
         # 消息处理
         self._msg_handler = msg_handler
@@ -86,6 +91,14 @@ class Server(IServer):
         if self._on_conn_close:
             self._on_conn_close(conn)
 
+    def set_connoperator(self, value: IConnectionOperator):
+        self._connoperator = value
+
+    def start_connoperator(self):
+        self._connoperator: IConnectionOperator
+        if self._connoperator:
+            self._connoperator.start()
+
     def handle_accepted(self, sock, addr):
         # 收到socket连接后创建一个连接对象
         cid = self.gen_conn_id()
@@ -102,8 +115,13 @@ class Server(IServer):
 
     def serve_forever(self):
         log.info("serve start: {}".format(self.addr))
+        # 开始tcp监听服务
         self._start_serve()
+        # 消息处理多线程
         self._msg_handler.start()
+        # 启动连接管理器
+        self.start_connoperator()
+
         try:
             asyncore.loop(0.01)
         except KeyboardInterrupt:
