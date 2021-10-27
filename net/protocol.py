@@ -1,98 +1,112 @@
-import struct
-from dataclasses import dataclass
+import threading
+from twisted.internet import protocol, reactor
 
-from dataclasses_json import dataclass_json
+from config.globalconfig import SERVER_CONFIG
 
-from iface.iconnnection import ISocketConnection
-from iface import IResponse, IRequest
-
-
-@dataclass_json
-@dataclass
-class Request(IRequest):
-    msg_id: int
-    d: bytes
-    conn: ISocketConnection = None
-
-    def get_msg_id(self) -> int:
-        return self.msg_id
-
-    def get_d(self) -> bytes:
-        return self.d
-
-    def get_conn(self) -> ISocketConnection:
-        return self.conn
-
-    def set_conn(self, conn: ISocketConnection):
-        self.conn = conn
+from net.connmanager import ConnectionManager
+from net.datapack import DataPack
+from net.msghandler import MsgHandler
 
 
-@dataclass_json
-@dataclass
-class Response(IResponse):
-    msg_id: int
-    d: bytes
+class ServerProtocol(protocol.Protocol):
 
-    def get_msg_id(self) -> int:
-        return self.msg_id
+    def __init__(self, *args, **kwargs):
+        super(ServerProtocol, self).__init__(*args, **kwargs)
 
-    def get_d(self) -> bytes:
-        return self.d
+        # 接受缓冲区
+        self._recv_buffer = b""
+        # 写锁、发送缓冲区
+        self._read_lock = threading.Lock()
+        self._data_handler = None
 
+    def connectionMade(self):
+        if self.factory.conn_manager.get_conns_cnt() >= SERVER_CONFIG.MAX_CONNECTION_NUM:
+            self.transport.lostConnection()
+            return
 
-class SocketProtocol:
-    # 传输数据格式解析
+        self.factory.conn_manager.add_conn(self)
 
-    MAX_ONCE_DATA_SIZE = 256 * 1024
+        # 收到socket连接后创建一个连接对象
+        conn_str = "*** new conn: total: {}, sid: {}, addr: {} ***".format(
+            self.factory.conn_manager.get_conns_cnt(), self.transport.sessionno, self.transport.hostname)
+        print("-" * len(conn_str))
+        print(conn_str)
+        print("-" * len(conn_str))
 
-    DEFAULT_FMT = ">I"
-    DEFAULT_MSG_ID_FMT = ">I"
+        # 添加一个新的连接 && 调用 connection的on_start方法
+        self.factory.conn_manager.add_conn(self)
 
-    def __init__(self, fmt=DEFAULT_FMT, msg_id_fmt=DEFAULT_MSG_ID_FMT):
-        # 由于可能㛮粘包的问题，所以在传输数据的过程中，需要在数据的头部加上一个表示
-        self.struct = struct.Struct(fmt)
-        # msg id 的打包
-        self.msg_id_struct = struct.Struct(msg_id_fmt)
+        self._data_handler = self._data_handle_coroutine()
+        self._data_handler.send(None)
 
-    def pack(self, response: Response):
-        """打包数据"""
-        msg_len = self.struct.pack(len(response.d))
-        return msg_len + self.msg_id_struct.pack(response.msg_id) + response.d
-
-    def unpack(self, bytes_data) -> (IRequest, int):
-        """解析接收到的数据"""
-        data_length = len(bytes_data)
-        head_length = self.get_head_len()
-        # 数据没有接受完
-        if data_length < head_length:
-            return None, -1
-
-        # 解析出head中标明后面的数据的长度
-        msg_length, = self.struct.unpack_from(bytes_data, 0)
-        # 消息id
-        msg_id, = self.msg_id_struct.unpack_from(bytes_data, self.struct.size)
-
-        # 本条数据的结束为止
-        end_index = head_length + msg_length
-        # 如果数据还没有接受完毕，那么久先不处理
-        if data_length < end_index:
-            return None, -1
-
-        return Request(msg_id, bytes_data[head_length:end_index]), end_index
-
-    def get_head_len(self):
-        """获取协议头的长度
+    def connectionLost(self, reason=protocol.connectionDone):
+        """conn 关闭，手动调用也可以，这个函数执行了，就会把连接给关闭了
         """
-        return self.struct.size + self.msg_id_struct.size
+        print("[conn {}] closed!".format(self.transport.sessionno))
+        # 关闭携程
+        self._data_handler.close()
+
+        # 客户端关闭连接的时候会调用
+        self.factory.do_conn_lost(self.factory.conn_manager.get_conn_by_id(self.transport.sessionno))
+
+        # 删除找个连接
+        self.factory.conn_manager.remove_conn_by_id(self.transport.sessionno)
+
+    def dataReceived(self, data):
+        self._data_handler.send(data)
+
+    def _parse_row(self):
+        # 读取一行的数据（一条有效的数据）
+        request, offset = self.factory.datapack.unpack(self._recv_buffer)
+
+        # 如果读到了数据，那么需要处理
+        if request:
+            with self._read_lock:
+                self._recv_buffer = self._recv_buffer[offset:]
+
+        return request
+
+    def _data_handle_coroutine(self):
+        """读取数据的时候"""
+        head_length = self.factory.datapack.get_head_len()
+        while True:
+            d = yield
+            # 没有需要接受接受的数据了，跳过
+            self._recv_buffer += d
+
+            requests = list()
+            while len(self._recv_buffer) >= head_length:
+                request = self._parse_row()
+                if not request:
+                    break
+
+                request.set_conn(self.factory.conn_manager.get_conn_by_id(self.transport.sessionno))
+                requests.append(request)
+                # 如果 requests 中量很大了，先扔到处理的队列中去
+
+            # 处理消息
+            self.factory.msg_handler.add_to_task_queue(*requests)
+
+    def delay_close(self):
+        # 延迟关闭conn
+        reactor.callFromThread(self.transport.loseConnection)
 
 
-def default_socket_protocol():
-    """默认情况下的协议数据结构
-       part1    part2     part3
-    [][][][] [][][][]   [][][][][]
-    含义:
-      part1: msg数据的长度
-      part2: 协议号（接口）
-      part3: msg的数据，长度为part1 4个字节的的值
-    """
-    return SocketProtocol()
+class ServerFactory(protocol.Factory):
+    protocol = ServerProtocol
+    # 连接管理
+    conn_manager = ConnectionManager()
+    # 数据解析
+    datapack = DataPack()
+    # 消息处理
+    msg_handler = MsgHandler()
+
+    def startFactory(self):
+        # 开启消息处理队列
+        self.msg_handler.start()
+
+    def stopFactory(self):
+        self.msg_handler.stop()
+
+    def do_conn_lost(self, conn):
+        pass

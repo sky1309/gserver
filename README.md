@@ -6,12 +6,12 @@ tcp游戏服务器，客户端发送服务器指定格式的数据格式，服�
 ```
   3 parts
     - 4 byte msg length
-    - 4 byte msg id
+    - 2 byte msg id
     - msg body
 
 -------------------------------------------------------------------------
-  4 byte msg length       4 byte msg id(route id)           msg
-     [][][][]                 [][][][]                  [][][]....[][][]
+  4 byte msg length       2 byte msg id(route id)  + msg
+     [][][][]                 [][][]....[][][]
 -------------------------------------------------------------------------
 ```
 
@@ -27,38 +27,21 @@ tcp游戏服务器，客户端发送服务器指定格式的数据格式，服�
 ### Usage
 ```python
 # Server
-from iface import IRequest
-from iface.iconnnection import ISocketConnection
+import server
 
-from net import server
-from net.msghandler import MsgHandler
-from net.route import BaseRoute
-from net.protocol import Response
+from net import msghandler
+from net.connmanager import Request, Response
 
 
-class Route(BaseRoute):
-    def handle(self, request: IRequest):
-        print('route handle', request)
-        request.get_conn().send_data(bytes(b"hello world!\n"))
-        response = Response(1, bytes(b"response: z x c v b n m.\n"))
-        request.get_conn().send_msg(response)
+def ping_view(request: Request):
+    request.conn.send_response(Response(2, b'response body'))
 
 
-def on_start(conn: ISocketConnection):
-    print("on start", conn)
-    conn.send_data(bytes(b"conn on start\n"))
-
-
-def on_close(conn: ISocketConnection):
-    print("on close", conn)
+msghandler.register_route(1, ping_view)
 
 
 if __name__ == '__main__':
-    s = server.Server(("127.0.0.1", 8000), 5, MsgHandler())
-    s.add_route(1, Route())
-    s.set_on_conn_start(on_start)
-    s.set_on_conn_close(on_close)
-    s.serve_forever()
+    server.serve_forever(8000)
 
 ```
 
@@ -66,13 +49,21 @@ if __name__ == '__main__':
 # Test Python Client
 import socket
 
-from net.protocol import Response, SocketProtocol
+from net.datapack import DataPack
+from net.connmanager import Response
 
-protocol = SocketProtocol()
-ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-ss.connect(("127.0.0.1", 8000))
 
-ss.send(protocol.pack(Response(1, b"send data...")))
-ss.recv(1024)
+def main():
+    ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    ss.connect(("127.0.0.1", 8000))
+
+    datapack = DataPack()
+    data = datapack.pack_response(Response(1, b'abc'))
+    ss.send(data)
+    ss.recv(1024)
+
+
+if __name__ == '__main__':
+    main()
 
 ```
