@@ -10,7 +10,7 @@ def ping_view(request: Request):
 
 msghandler.register_route(1, ping_view)
 
-server.set_connection_lost(lambda d: print("offline callback."))
+server.set_connection_lost(lambda d: print("offline callback.", d))
 
 
 if __name__ == '__main__':

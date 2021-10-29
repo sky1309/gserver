@@ -100,6 +100,8 @@ class ServerFactory(protocol.Factory):
     datapack = DataPack()
     # 消息处理
     msg_handler = MsgHandler()
+    # 连接断开的回调
+    conn_lost_callback = None
 
     def startFactory(self):
         # 开启消息处理队列
@@ -109,4 +111,7 @@ class ServerFactory(protocol.Factory):
         self.msg_handler.stop()
 
     def do_conn_lost(self, conn):
-        pass
+        if self.conn_lost_callback is None:
+            return
+
+        self.conn_lost_callback(conn)

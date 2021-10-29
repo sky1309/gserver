@@ -68,7 +68,7 @@ class MsgHandler:
             t.start()
 
         self._is_init = True
-        print("[msg handler] start success.")
+        print(f"[msg handler] start success, count={self._max_worker}.")
 
 
 class ThreadHandler(threading.Thread):
@@ -123,7 +123,6 @@ class ThreadHandler(threading.Thread):
     def close(self):
         """关闭"""
         self._is_open = True
-        print("[thread handler {} ] closed.".format(self._tid))
 
     def notify(self):
         """notify threading ready to exec request"""
