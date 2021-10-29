@@ -9,7 +9,7 @@ factory = ServerFactory()
 def set_connection_lost(callback):
     """连接断开的使用的回调函数（一般用于玩家离线后的逻辑处理）
     """
-    factory.do_conn_lost = callback
+    factory.conn_lost_callback = callback
 
 
 def serve_forever(port):

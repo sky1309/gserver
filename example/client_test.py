@@ -10,7 +10,10 @@ def main():
 
     datapack = DataPack()
     data = datapack.pack_response(Response(1, b'abc'))
-    ss.send(data)
+    for i in range(100):
+        ss.send(data)
+    import time
+    time.sleep(2)
     print(ss.recv(1024))
 
 
