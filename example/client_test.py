@@ -10,11 +10,13 @@ def main():
 
     datapack = DataPack()
     data = datapack.pack_response(Response(1, b'abc'))
-    for i in range(100):
-        ss.send(data)
-    import time
-    time.sleep(2)
-    print(ss.recv(1024))
+    ss.send(data)
+
+    while True:
+        import time
+        t = time.time()
+        print(ss.recv(1024))
+        print("use time:", time.time() - t)
 
 
 if __name__ == '__main__':

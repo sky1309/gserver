@@ -77,7 +77,7 @@ class ConnectionManager:
                 continue
 
             try:
-                self._connections[pk].send_msg(response)
+                self._connections[pk].send_response(response)
             except:
                 pass
 
