@@ -1,18 +1,22 @@
 from twisted.internet import reactor
 
+import globalobject
 from net.protocol import ServerFactory
 
 
-factory = ServerFactory()
+def start_netfactory(port, factory=None):
+    """启动网关服务"""
+    if factory is None:
+        factory = ServerFactory()
 
+    # 设置全局的factory对象
+    globalobject.netfactory = factory
 
-def set_connection_lost(callback):
-    """连接断开的使用的回调函数（一般用于玩家离线后的逻辑处理）
-    """
-    factory.conn_lost_callback = callback
-
-
-def serve_forever(port):
-    print(f"Listen tcp address: http://0.0.0.0:{port}")
+    print(f"[netfactory] listen tcp address: http://0.0.0.0:{port}")
     reactor.listenTCP(port, factory)
+    return factory
+
+
+def serve_forever():
+    """启动服务器"""
     reactor.run()

@@ -70,6 +70,10 @@ class MsgHandler:
         self._is_init = True
         print(f"[msg handler] start success, count={self._max_worker}.")
 
+    @staticmethod
+    def register_route(name, handler):
+        register_route(name, handler)
+
 
 class ThreadHandler(threading.Thread):
 
@@ -127,3 +131,7 @@ class ThreadHandler(threading.Thread):
     def notify(self):
         """notify threading ready to exec request"""
         self._cond.notify()
+
+
+# 全局的对象（）
+msg_handler = MsgHandler()
