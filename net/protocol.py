@@ -5,7 +5,7 @@ from config.globalconfig import SERVER_CONFIG
 
 from net.connmanager import ConnectionManager
 from net.datapack import DataPack
-from net.msghandler import MsgHandler
+from net.msghandler import msg_handler
 
 
 class ServerProtocol(protocol.Protocol):
@@ -20,11 +20,9 @@ class ServerProtocol(protocol.Protocol):
         self._data_handler = None
 
     def connectionMade(self):
-        if self.factory.conn_manager.get_conns_cnt() >= SERVER_CONFIG.MAX_CONNECTION_NUM:
+        if self.factory.conn_manager.get_conns_cnt() >= SERVER_CONFIG.max_connection_num:
             self.transport.lostConnection()
             return
-
-        self.factory.conn_manager.add_conn(self)
 
         # 收到socket连接后创建一个连接对象
         conn_str = "*** new conn: total: {}, sid: {}, addr: {} ***".format(
@@ -99,7 +97,7 @@ class ServerFactory(protocol.Factory):
     # 数据解析
     datapack = DataPack()
     # 消息处理
-    msg_handler = MsgHandler()
+    msg_handler = msg_handler
     # 连接断开的回调
     conn_lost_callback = None
 

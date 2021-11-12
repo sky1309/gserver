@@ -1,40 +1,64 @@
-import yaml
-from dataclasses import dataclass
+import os
+import json
+from typing import Dict
+
+from dataclasses import dataclass, field
 from dataclasses_json import DataClassJsonMixin
+
+
+@dataclass
+class NodeConfig:
+    """节点名称"""
+    # pb端口号
+    port: int
+    # 服务名称
+    name: str
+    # 主机地址
+    host: str = "0.0.0.0"
 
 
 @dataclass
 class Config(DataClassJsonMixin):
     # 端口号
-    PORT: int = 3636
-    BACKLOG: int = 20
+    port: int = 3636
+    backlog: int = 20
 
     # # 最大连接数
-    MAX_CONNECTION_NUM: int = 1024
+    max_connection_num: int = 1024
     # msg handler 处理线程数
-    WORKER_POOL_SIZE: int = 5
+    worker_pool_size: int = 5
     # 最大数据包的大小
-    PACKAGE_MAX_SIZE: int = 2 ** 16
+    package_max_size: int = 2 ** 16
 
     # socket数据长度格式，">H" 表示short int 2个字节，# 0x0002 0x0002 0x1234
-    DEFAULT_FMT: str = ">I"
+    default_fmt: str = ">I"
     # 消息id占用两个字节
-    DEFAULT_MESSAGE_ID_FMT = ">H"
-    # # 是否使用加密
+    default_message_id_fmt = ">H"
+    # 是否使用加密
     enable_crypt: bool = True
 
-    def reload(self, file_path: str):
-        """重新加载配置文件到全局的Config对象中去"""
-        # 重新加载配置文件
+    # 集群数据
+    nodes: Dict[str, NodeConfig] = field(default_factory=dict)
 
-        with open(file_path, "r") as f:
-            data = yaml.safe_load(f)
-
-        for key, t in self.__annotations__.items():
-            if not (key in data and isinstance(data[key], t)):
-                continue
-            setattr(self, key, data[key])
+    @classmethod
+    def from_config(cls, data) -> "Config":
+        """重新加载配置文件到全局的Config对象中去 config.json
+        """
+        return cls.from_dict(data)
 
 
+def read_config_file(node_id, path="./config/config.json"):
+    """重新读取配置文件"""
+    _config_file_path = os.path.join(os.getcwd(), path)
+    if not os.path.exists(_config_file_path):
+        return
+
+    with open(_config_file_path, "r") as f:
+        data = json.load(f)
+
+    return data["nodes"][node_id]
+
+
+# 节点id
 # 全局的配置对象, 配置服务启动的情况
 SERVER_CONFIG = Config()
