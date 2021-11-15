@@ -1,8 +1,7 @@
 import os
 import json
-from typing import Dict
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
 
 
@@ -18,15 +17,14 @@ class NodeConfig:
 
 
 @dataclass
-class Config(DataClassJsonMixin):
+class NetConfig(DataClassJsonMixin):
     # 端口号
     port: int = 3636
-    backlog: int = 20
 
     # # 最大连接数
     max_connection_num: int = 1024
     # msg handler 处理线程数
-    worker_pool_size: int = 5
+    worker_size: int = 5
     # 最大数据包的大小
     package_max_size: int = 2 ** 16
 
@@ -37,17 +35,14 @@ class Config(DataClassJsonMixin):
     # 是否使用加密
     enable_crypt: bool = True
 
-    # 集群数据
-    nodes: Dict[str, NodeConfig] = field(default_factory=dict)
-
     @classmethod
-    def from_config(cls, data) -> "Config":
-        """重新加载配置文件到全局的Config对象中去 config.json
+    def from_config(cls, data) -> "NetConfig":
+        """重新加载配置文件到全局的Config对象中去 config-template.json
         """
         return cls.from_dict(data)
 
 
-def read_config_file(node_id, path="./config/config.json"):
+def read_config_file(node_id, path="./config/config-template.json"):
     """重新读取配置文件"""
     _config_file_path = os.path.join(os.getcwd(), path)
     if not os.path.exists(_config_file_path):
@@ -61,4 +56,4 @@ def read_config_file(node_id, path="./config/config.json"):
 
 # 节点id
 # 全局的配置对象, 配置服务启动的情况
-SERVER_CONFIG = Config()
+NET_CONFIG = NetConfig()

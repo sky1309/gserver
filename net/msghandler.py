@@ -121,9 +121,6 @@ class ThreadHandler(threading.Thread):
                 find = False
         return request, find
 
-    def get_condition(self) -> threading.Condition:
-        return self._cond
-
     def close(self):
         """关闭"""
         self._is_open = True

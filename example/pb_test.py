@@ -1,7 +1,6 @@
-import sys
-from twisted.internet import reactor
-
 from util import timer
+
+import server
 from cluster.service import Service
 from cluster.cluster import cluster
 
@@ -18,7 +17,6 @@ def ping():
 
 
 # 初始化节点数据
-cluster.init_cluster(int(sys.argv[1]))
 cluster.pb_server.set_service(s)
 
 
@@ -30,4 +28,4 @@ def foo():
 
 timer.add_loop_task(2, foo)
 
-reactor.run()
+server.serve_forever()
