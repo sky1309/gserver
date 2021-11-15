@@ -6,11 +6,8 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-pymongo = "*"
-marshmallow = "*"
 dataclasses-json = "*"
 twisted = "*"
-pyyaml = "*"
 
 [requires]
 python_version = "3.8.2"

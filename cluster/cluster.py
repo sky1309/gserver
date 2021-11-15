@@ -4,12 +4,11 @@ from typing import Dict, Optional
 from dataclasses import dataclass, field
 
 from dataclasses_json import DataClassJsonMixin
-from twisted.internet.defer import Deferred
-
+from twisted.internet.defer import Deferred, fail
 
 from cluster.pb import Remote, Root
 
-# 配置文件路径
+# 配置文件路径项目启动目录下面 WORKSPACE/
 config_path = "config/config.json"
 
 
@@ -49,7 +48,7 @@ class Cluster:
         self.pb_server.start(self.local_node_info.port)
 
     def _connect_remote(self):
-        self.consule_nodes()
+        self.console_nodes()
         for remote in self.remotes.values():
             remote.connect_remote()
 
@@ -64,12 +63,12 @@ class Cluster:
             else:
                 self.remotes[_info.node_id] = Remote(_info.host, _info.port, _info.name)
 
-    def consule_nodes(self):
+    def console_nodes(self):
         print("cluster nodes: ", [i for i in self.remotes.keys()])
 
     def call_node(self, node_id, name, *args, **kwargs) -> Optional[Deferred]:
         if node_id not in self.remotes:
-            return
+            return fail()
 
         return self.remotes[node_id].call_remote_handler(name, *args, **kwargs)
 

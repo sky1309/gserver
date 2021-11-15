@@ -1,6 +1,6 @@
 import struct
 
-from config.globalconfig import SERVER_CONFIG
+from config.globalconfig import NET_CONFIG
 
 from .connmanager import Request, Response
 
@@ -10,9 +10,9 @@ class DataPack:
 
     def __init__(self, fmt=None, message_id_fmt=None):
         if fmt is None:
-            fmt = SERVER_CONFIG.default_fmt
+            fmt = NET_CONFIG.default_fmt
         if message_id_fmt is None:
-            message_id_fmt = SERVER_CONFIG.default_message_id_fmt
+            message_id_fmt = NET_CONFIG.default_message_id_fmt
 
         # 由于可能㛮粘包的问题，所以在传输数据的过程中，需要在数据的头部加上一个表示
         self.head_struct = struct.Struct(fmt)

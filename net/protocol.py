@@ -1,7 +1,7 @@
 import threading
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol
 
-from config.globalconfig import SERVER_CONFIG
+from config.globalconfig import NET_CONFIG
 
 from net.connmanager import ConnectionManager
 from net.datapack import DataPack
@@ -20,7 +20,7 @@ class ServerProtocol(protocol.Protocol):
         self._data_handler = None
 
     def connectionMade(self):
-        if self.factory.conn_manager.get_conns_cnt() >= SERVER_CONFIG.max_connection_num:
+        if self.factory.conn_manager.get_conns_cnt() >= NET_CONFIG.max_connection_num:
             self.transport.lostConnection()
             return
 
@@ -85,10 +85,6 @@ class ServerProtocol(protocol.Protocol):
             # 处理消息
             self.factory.msg_handler.add_to_task_queue(*requests)
 
-    def delay_close(self):
-        # 延迟关闭conn
-        reactor.callFromThread(self.transport.loseConnection)
-
 
 class ServerFactory(protocol.Factory):
     protocol = ServerProtocol
@@ -107,6 +103,9 @@ class ServerFactory(protocol.Factory):
 
     def stopFactory(self):
         self.msg_handler.stop()
+
+    def set_datapack(self, datapack):
+        self.datapack = datapack
 
     def do_conn_lost(self, conn):
         if self.conn_lost_callback is None:
