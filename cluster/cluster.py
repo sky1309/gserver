@@ -1,15 +1,21 @@
 import json
-import os
-from typing import Dict, Optional
+import argparse
+from typing import Dict, Optional, List
 from dataclasses import dataclass, field
 
 from dataclasses_json import DataClassJsonMixin
-from twisted.internet.defer import Deferred, fail
+from twisted.internet.defer import Deferred
 
+from config import globalconfig
 from cluster.pb import Remote, Root
 
-# 配置文件路径项目启动目录下面 WORKSPACE/
-config_path = "config/config.json"
+
+# 系统的参数处理
+parser = argparse.ArgumentParser()
+# 节点id（rpc）
+parser.add_argument("-nodeid", required=True, dest="nodeid", type=int)
+# ....
+sys_args = parser.parse_args()
 
 
 @dataclass
@@ -34,8 +40,10 @@ class Cluster:
     # 所有的节点数据
     remotes: Dict[int, Remote] = field(default_factory=dict)
 
+    # 网关id列表(不是网关的服务可以通过遍历所有的网关，然后吧数据发送给所有的网关)
+    gates: List[int] = field(default_factory=list)
+
     def init_cluster(self, node_id):
-        print(f"init cluster, node id = {node_id}")
         # 读取配置文件
         self._read_config(node_id)
         # 启动本地的
@@ -54,7 +62,7 @@ class Cluster:
 
     def _read_config(self, local_node_id: int):
         # 读取配置文件
-        with open(os.path.join(os.getcwd(), config_path), "r") as f:
+        with open(globalconfig.config_path, "r") as f:
             data = json.load(f)
 
         for _info in map(lambda d: NodeInfo.from_dict(d), data["nodes"]):
@@ -63,14 +71,18 @@ class Cluster:
             else:
                 self.remotes[_info.node_id] = Remote(_info.host, _info.port, _info.name)
 
+        # 所有的网关
+        for gate in data["gates"]:
+            self.gates.append(gate["node_id"])
+
     def console_nodes(self):
-        print("cluster nodes: ", [i for i in self.remotes.keys()])
+        print(f"my node: {self.local_node_info.node_id}, cluster nodes: ", [i for i in self.remotes.keys()])
 
     def call_node(self, node_id, name, *args, **kwargs) -> Optional[Deferred]:
         if node_id not in self.remotes:
-            return fail()
+            return
 
-        return self.remotes[node_id].call_remote_handler(name, *args, **kwargs)
+        return self.remotes[node_id].call_remote_handler(self.local_node_info.node_id, name, *args, **kwargs)
 
 
 cluster = Cluster()
