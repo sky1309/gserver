@@ -3,15 +3,34 @@ from twisted.internet import reactor
 import server
 from cluster import cluster
 from cluster import service
-from net import protocol
-from net.connmanager import Response, Request
+from net import protocol, msghandler
+from net.connmanager import Response
 
 
 gate_service = service.Service("gate_service")
 cluster.cluster.pb_server.set_service(gate_service)
 
+
+class GateMsgHanlder(msghandler.MsgHandler):
+    def handle_request(self, request):
+        # 做一个转发
+        print("ping_view")
+        df = cluster.cluster.call_node(2, request.msg_id, server.sys_args.nodeid, request.conn.id, request.data)
+        df.addCallback(lambda d: print("logic foo callback", d))
+        print("finish ping view")
+        request.conn.send_response(Response(1, b'nmd'))
+
+
 # 全局的前端连接factory
 netfactory = protocol.ServerFactory()
+# 消息处理
+netfactory.msg_handler = GateMsgHanlder()
+
+
+# gate以外的服务可以调用这个，给指定的session发送数据
+def sendto_session(sessionid, msg_id, data):
+    print("sendto_session...")
+    netfactory.conn_manager.sendto_sessions(Response(msg_id, data), [sessionid])
 
 
 def broadcast_handler(msg_id, data):
@@ -19,6 +38,7 @@ def broadcast_handler(msg_id, data):
 
 
 gate_service.register_handler("broadcast", broadcast_handler)
+gate_service.register_handler("sendto_session", sendto_session)
 
 
 def net_handler(name):
@@ -33,16 +53,6 @@ def net_handler(name):
         netfactory.msg_handler.register_route(name, func)
 
     return process
-
-
-# 注册路由
-@net_handler(1)
-def ping_view(request: Request):
-    print("ping_view")
-    df = cluster.cluster.call_node(2, "foo", request.data)
-    df.addCallback(lambda d: print("logic foo callback", d))
-    print("finish ping view")
-    request.conn.send_response(Response(1, b'nmd'))
 
 
 # 启动网关
