@@ -1,6 +1,8 @@
 from twisted.spread import pb
 from twisted.internet import reactor
 
+from util import timer
+
 
 class Root(pb.Root):
     def __init__(self):
@@ -31,7 +33,8 @@ class Remote:
 
     def connect_remote(self):
         self._factory = pb.PBClientFactory()
-        reactor.connectTCP(self._host, self._port, self._factory)
+        # 连接远端的时候必须增加延时操作
+        timer.add_later_task(2, reactor.connectTCP, self._host, self._port, self._factory)
 
     def call_remote_handler(self, nodeid, name, *args, **kwargs):
         """调用远程的处理函数"""
