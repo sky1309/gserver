@@ -1,39 +1,37 @@
-# sample-game-server
-tcp游戏echo服务器，客户端发送服务器指定格式的数据格式，服务器获取对应的协议号，走不同的逻辑函数
+# simple-game-server
+tcp游戏服务器，客户端发送服务器指定格式的数据格式，服务端解析出协议号，分发到不同的路由中
+最近看了golang实现的轻量级tcp服务器 [```zinx```](https://github.com/aceld/zinx)，学习了他实现的实现思想，做了个python的实现版本。。。
 
+## Protocol(协议)
+```
+  3 parts
+    - 2 byte msg length
+    - 2 byte msg id
+    - msg body
 
-## Start
+-------------------------------------------------------------------------
+  2 byte msg length       2 byte msg id(route id)  + msg
+         [][]                 [][]....[][][]
+-------------------------------------------------------------------------
+```
 
+## Quick Start
+
+### Install
+    git clone 
+
+    cd workspace
+    
+    pipenv sync
+
+### Usage
 ```python
 # Server
 
-from net import server
 
-s = server.Server(("127.0.0.1", 8000), 5)
-
-
-@s.route("hello_world")
-def hello_world(request):
-    request.client.send({
-        "c": "hello world."
-    })
-
-
-if __name__ == '__main__':
-    s.serve_forever()
 ```
 
 ```python
-# Client
+# Test Python Client
 
-import socket
-from net.server import Server
-
-protocol = Server.get_default_protocol_ins()
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-s.connect(("127.0.0.1",8000))
-s.send(protocol.pack_data({"c": "hello_world", "d": {}}))
-
-print(s.recv(1024))
 ```

@@ -17,7 +17,7 @@ class Root(pb.Root):
         """设置消息处理"""
         self._service = service
 
-    def remote_handle(self, key, *args, **kwargs):
+    def remote_handle(self, nodeid, key, *args, **kwargs):
         """调用远程的服务"""
         return self._service.call_handler(key, *args, **kwargs)
 
@@ -33,7 +33,7 @@ class Remote:
         self._factory = pb.PBClientFactory()
         reactor.connectTCP(self._host, self._port, self._factory)
 
-    def call_remote_handler(self, name, *args, **kwargs):
+    def call_remote_handler(self, nodeid, name, *args, **kwargs):
         """调用远程的处理函数"""
         root = self._factory.getRootObject()
-        return root.addCallback(lambda d: d.callRemote("handle", name, *args, **kwargs))
+        return root.addCallback(lambda d: d.callRemote("handle", nodeid, name, *args, **kwargs))

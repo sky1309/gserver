@@ -34,7 +34,7 @@ class Service:
 
     def route(self, name):
         def wrap(func):
-            self.register_handler(name, func)
+            return self.register_handler(name, func)
         return wrap
 
     def register_handler(self, name, handler):
@@ -42,6 +42,7 @@ class Service:
         if name in self._handlers:
             raise DuplicateRegisterError(f"{self} duplicate register handler: {name}!")
         self._handlers[name] = handler
+        return handler
 
     def delete_handler(self, name):
         """移除路由"""
@@ -51,6 +52,9 @@ class Service:
 
         del self._handlers[name]
 
+    ###########
+    # 调用
+    ###########
     def call_handler(self, name, *args, **kwargs):
         if self.mode == EServiceMode.ASYNC:
             # 异步

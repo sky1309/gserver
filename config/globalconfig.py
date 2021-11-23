@@ -1,19 +1,11 @@
 import os
 import json
-
 from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
 
 
-@dataclass
-class NodeConfig:
-    """节点名称"""
-    # pb端口号
-    port: int
-    # 服务名称
-    name: str
-    # 主机地址
-    host: str = "0.0.0.0"
+# 配置文件路径项目启动目录下面 WORKSPACE/
+config_path = os.path.join(os.getcwd(), "config/config.json")
 
 
 @dataclass
@@ -35,25 +27,25 @@ class NetConfig(DataClassJsonMixin):
     # 是否使用加密
     enable_crypt: bool = True
 
-    @classmethod
-    def from_config(cls, data) -> "NetConfig":
-        """重新加载配置文件到全局的Config对象中去 config-template.json
-        """
-        return cls.from_dict(data)
+    def load_config(self, node_id):
+        """加载配置文件"""
+        with open(config_path, "r") as f:
+            config = json.load(f)
 
+        gate_config = None
+        for item in config["gates"]:
+            if item["node_id"] == node_id:
+                gate_config = item
+                break
 
-def read_config_file(node_id, path="./config/config-template.json"):
-    """重新读取配置文件"""
-    _config_file_path = os.path.join(os.getcwd(), path)
-    if not os.path.exists(_config_file_path):
-        return
-
-    with open(_config_file_path, "r") as f:
-        data = json.load(f)
-
-    return data["nodes"][node_id]
+        assert gate_config, f"not find nodeid={node_id} gate config!"
+        # 只加载有的字段
+        for key, value in gate_config.items():
+            if key not in self.__annotations__:
+                continue
+            setattr(self, key, value)
 
 
 # 节点id
-# 全局的配置对象, 配置服务启动的情况
+# 全局的配置对象, 配置服务启动的情况（有的情况下是不使用gate服务的）
 NET_CONFIG = NetConfig()
