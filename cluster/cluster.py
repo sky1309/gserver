@@ -1,5 +1,4 @@
 import json
-import argparse
 from typing import Dict, Optional, List
 from dataclasses import dataclass, field
 
@@ -8,14 +7,6 @@ from twisted.internet.defer import Deferred
 
 from config import globalconfig
 from cluster.pb import Remote, Root
-
-
-# 系统的参数处理
-parser = argparse.ArgumentParser()
-# 节点id（rpc）
-parser.add_argument("-nodeid", required=True, dest="nodeid", type=int)
-# ....
-sys_args = parser.parse_args()
 
 
 @dataclass
@@ -81,7 +72,6 @@ class Cluster:
     def call_node(self, node_id, name, *args, **kwargs) -> Optional[Deferred]:
         if node_id not in self.remotes:
             return
-
         return self.remotes[node_id].call_remote_handler(self.local_node_info.node_id, name, *args, **kwargs)
 
 

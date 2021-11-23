@@ -2,31 +2,8 @@ import threading
 from typing import List
 from collections import deque
 
-
 from net.connmanager import Request
 from net.view import BaseView
-
-
-# 全局路由
-_routes = {}
-
-
-def register_route(msg_id, handler):
-    if msg_id in _routes:
-        raise NotImplementedError("duplicate route error, msg id", msg_id)
-    _routes[msg_id] = handler
-
-
-def handle_request(request):
-    """处理请求的逻辑"""
-    handler = _routes.get(request.msg_id)
-    if not handler:
-        print("not find route msg id: {}".format(request.msg_id))
-        return
-    if isinstance(handler, BaseView):
-        handler.do(request)
-    elif callable(handler):
-        handler(request)
 
 
 class MsgHandler:
@@ -37,6 +14,8 @@ class MsgHandler:
 
         # 是否已经初始化了
         self._is_init = False
+        # 路由
+        self._routes = {}
 
     def add_to_task_queue(self, *requests: Request):
         for request in requests:
@@ -60,7 +39,7 @@ class MsgHandler:
             return
 
         for tid in range(self._max_worker):
-            t = ThreadHandler(tid)
+            t = ThreadHandler(tid, self)
             t.setDaemon(True)
             self._thread_pool.append(t)
 
@@ -70,15 +49,30 @@ class MsgHandler:
         self._is_init = True
         print(f"[msg handler] start success, count={self._max_worker}.")
 
-    @staticmethod
-    def register_route(name, handler):
-        register_route(name, handler)
+    def register_route(self, name, handler):
+        """路由注册"""
+        if name in self._routes:
+            raise NotImplementedError("duplicate route error, msg id", name)
+        self._routes[name] = handler
+
+    def handle_request(self, request):
+        """默认的消息处理，可以通过继承并重写这个方法，用作其他用途"""
+        handler = self._routes.get(request.msg_id)
+        if not handler:
+            print("not find route msg id: {}".format(request.msg_id))
+            return
+        if isinstance(handler, BaseView):
+            handler.do(request)
+        elif callable(handler):
+            handler(request)
 
 
 class ThreadHandler(threading.Thread):
 
-    def __init__(self, tid, *args, **kwargs):
+    def __init__(self, tid, message_handler, *args, **kwargs):
         super(ThreadHandler, self).__init__(*args, **kwargs)
+
+        self._message_handler = message_handler
 
         self._requests_queue = deque()
         self._lock = threading.Lock()
@@ -97,7 +91,7 @@ class ThreadHandler(threading.Thread):
                 self._cond.wait()
                 continue
 
-            handle_request(request)
+            self._message_handler.handle_request(request)
 
     def put_requests(self, *request: Request):
         """添加新的请求"""
@@ -128,7 +122,3 @@ class ThreadHandler(threading.Thread):
     def notify(self):
         """notify threading ready to exec request"""
         self._cond.notify()
-
-
-# 全局的对象（）
-msg_handler = MsgHandler()

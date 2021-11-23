@@ -1,11 +1,11 @@
 import threading
 from twisted.internet import protocol
 
+from log import log
 from config.globalconfig import NET_CONFIG
 
 from net.connmanager import ConnectionManager
 from net.datapack import DataPack
-from net.msghandler import msg_handler
 
 
 class ServerProtocol(protocol.Protocol):
@@ -21,7 +21,7 @@ class ServerProtocol(protocol.Protocol):
 
     def connectionMade(self):
         if self.factory.conn_manager.get_conns_cnt() >= NET_CONFIG.max_connection_num:
-            self.transport.lostConnection()
+            self.transport.loseConnection()
             return
 
         # 收到socket连接后创建一个连接对象
@@ -41,8 +41,9 @@ class ServerProtocol(protocol.Protocol):
         """conn 关闭，手动调用也可以，这个函数执行了，就会把连接给关闭了
         """
         print("[conn {}] closed!".format(self.transport.sessionno))
-        # 关闭携程
-        self._data_handler.close()
+        # 关闭携程(携程可能没有创建)
+        if self._data_handler:
+            self._data_handler.close()
 
         # 客户端关闭连接的时候会调用
         self.factory.do_conn_lost(self.factory.conn_manager.get_conn_by_id(self.transport.sessionno))
@@ -83,7 +84,7 @@ class ServerProtocol(protocol.Protocol):
                 # 如果 requests 中量很大了，先扔到处理的队列中去
 
             # 处理消息
-            self.factory.msg_handler.add_to_task_queue(*requests)
+            self.factory.deal_requests(*requests)
 
 
 class ServerFactory(protocol.Factory):
@@ -93,19 +94,28 @@ class ServerFactory(protocol.Factory):
     # 数据解析
     datapack = DataPack()
     # 消息处理
-    msg_handler = msg_handler
+    msg_handler = None
     # 连接断开的回调
     conn_lost_callback = None
 
     def startFactory(self):
         # 开启消息处理队列
-        self.msg_handler.start()
+        if self.msg_handler:
+            self.msg_handler.start()
 
     def stopFactory(self):
-        self.msg_handler.stop()
+        if self.msg_handler:
+            self.msg_handler.stop()
 
     def set_datapack(self, datapack):
         self.datapack = datapack
+
+    def deal_requests(self, *requests):
+        """处理请求处理"""
+        if not self.msg_handler:
+            log.lgserver.warning("factory not set message handler!")
+            return
+        self.msg_handler.add_to_task_queue(*requests)
 
     def do_conn_lost(self, conn):
         if self.conn_lost_callback is None:
