@@ -1,26 +1,30 @@
-import server
-import globalobject
-
+from twisted.internet import reactor
 from util import timer
-from net.connmanager import Request, Response
 
-from cluster.pb import Root
 from cluster.service import Service
 
+import server
+from net.connmanager import Request, Response
+from net import protocol
+
+
+netfactory = protocol.ServerFactory()
 
 # 断开连接的回调
-server.start_netfactory(8000).conn_lost_callback = lambda d: print("offline callback.", d)
+netfactory.conn_lost_callback = lambda d: print("offline callback.", d)
 
 
-# 注册路由
-@globalobject.netservice_handler(1)
 def ping_view(request: Request):
     request.conn.send_response(Response(2, b'response body'))
 
 
+# 注册路由
+netfactory.msg_handler.register_route(1, ping_view)
+
+
 # 测试的发送数据给所有的连接
 def sendto_all():
-    globalobject.netfactory.conn_manager.sendto_all(Response(1, b'pong!!!'))
+    netfactory.conn_manager.sendto_all(Response(1, b'pong!!!'))
 
 
 # 定时循环
@@ -35,9 +39,8 @@ def foo():
     print("service foo!!!")
 
 
+reactor.listenTCP(8000, netfactory)
+
+
 if __name__ == '__main__':
-    # 远程的服务器
-    root = Root()
-    root.set_service(service)
-    root.start(8001)
     server.serve_forever()
