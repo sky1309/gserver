@@ -4,13 +4,40 @@ from twisted.internet import reactor
 from util import timer
 
 
+class ClusterPBServerFactory(pb.PBServerFactory):
+    """集群rcp服务端"""
+    def clientConnectionMade(self, protocol):
+        """当有一个连接连接时"""
+        pass
+
+
+class ClusterPBClientFactory(pb.PBClientFactory):
+    """集群rcp客户端"""
+    # 重连的时间间隔
+    reconnect_interval = 2
+
+    def reconnect(self, connector):
+        print(f"{self} reconnecting...")
+        connector.connect()
+
+    def clientConnectionFailed(self, connector, reason):
+        """客户端连接服务器失败后，尝试重新连接"""
+        # 延迟重连
+        timer.add_later_task(self.reconnect_interval, self.reconnect, connector)
+
+    def clientConnectionLost(self, connector, reason, reconnecting=1):
+        super(ClusterPBClientFactory, self).clientConnectionLost(connector, reason, reconnecting)
+        # 延迟重连
+        timer.add_later_task(self.reconnect_interval, self.reconnect, connector)
+
+
 class Root(pb.Root):
     def __init__(self):
         # cluster.service.Service
         self._service = None
 
     def start(self, port):
-        reactor.listenTCP(port, pb.PBServerFactory(self))
+        reactor.listenTCP(port, ClusterPBServerFactory(self))
 
     def remote_ping(self):
         return "pong"
@@ -32,7 +59,7 @@ class Remote:
         self._factory = None
 
     def connect_remote(self):
-        self._factory = pb.PBClientFactory()
+        self._factory = ClusterPBClientFactory()
         # 连接远端的时候必须增加延时操作
         timer.add_later_task(2, reactor.connectTCP, self._host, self._port, self._factory)
 

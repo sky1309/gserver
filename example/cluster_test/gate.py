@@ -28,17 +28,15 @@ netfactory.msg_handler = GateMsgHanlder()
 
 
 # gate以外的服务可以调用这个，给指定的session发送数据
+@gate_service.route("sendto_session")
 def sendto_session(sessionid, msg_id, data):
     print("sendto_session...")
     netfactory.conn_manager.sendto_sessions(Response(msg_id, data), [sessionid])
 
 
+@gate_service.route("broadcast")
 def broadcast_handler(msg_id, data):
     netfactory.conn_manager.sendto_all(Response(msg_id, data))
-
-
-gate_service.register_handler("broadcast", broadcast_handler)
-gate_service.register_handler("sendto_session", sendto_session)
 
 
 def net_handler(name):

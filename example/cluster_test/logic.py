@@ -11,7 +11,7 @@ cluster.cluster.pb_server.set_service(sv)
 def foo(nodeid, sessionid, data):
     print("foo", nodeid, sessionid, data)
     for gate_node_id in cluster.cluster.gates:
-        cluster.cluster.call_node(gate_node_id, "broadcast", 1, b'logic server data!!')
+        cluster.cluster.call_node(gate_node_id, "broadcast", 1, b'logic foo!!')
         timer.add_later_task(3, cluster.cluster.call_node, gate_node_id, "sendto_session", sessionid, 123, b'ss')
 
     return "foo"
@@ -19,7 +19,7 @@ def foo(nodeid, sessionid, data):
 
 def test_loop_task():
     for gate_node_id in cluster.cluster.gates:
-        print('test_loop_task', gate_node_id)
+        print(f'test_loop_task, nodeid={gate_node_id}')
         cluster.cluster.call_node(gate_node_id, "broadcast", 1, b'logic server data!!')
 
 
