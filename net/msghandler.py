@@ -3,7 +3,6 @@ from typing import List
 from collections import deque
 
 from net.connmanager import Request
-from net.view import BaseView
 
 
 class MsgHandler:
@@ -14,7 +13,7 @@ class MsgHandler:
 
         # 是否已经初始化了
         self._is_init = False
-        # 路由
+        # 路由（可能有的情况下用不到）
         self._routes = {}
 
     def add_to_task_queue(self, *requests: Request):
@@ -61,10 +60,7 @@ class MsgHandler:
         if not handler:
             print("not find route msg id: {}".format(request.msg_id))
             return
-        if isinstance(handler, BaseView):
-            handler.do(request)
-        elif callable(handler):
-            handler(request)
+        handler(request)
 
 
 class ThreadHandler(threading.Thread):

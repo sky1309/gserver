@@ -2,10 +2,10 @@ import threading
 from twisted.internet import protocol
 
 from log import log
-from config.globalconfig import NET_CONFIG
+from config import globalconfig
 
 from net.connmanager import ConnectionManager
-from net.datapack import DataPack
+from net.datapack import DataPack, EUnpackState
 
 
 class ServerProtocol(protocol.Protocol):
@@ -20,7 +20,8 @@ class ServerProtocol(protocol.Protocol):
         self._data_handler = None
 
     def connectionMade(self):
-        if self.factory.conn_manager.get_conns_cnt() >= NET_CONFIG.max_connection_num:
+        if self.factory.conn_manager.get_conns_cnt() >= globalconfig.NET_CONFIG.max_connection_num:
+            log.lgserver.warning(f"max client online, max={globalconfig.NET_CONFIG.max_connection_num}!")
             self.transport.loseConnection()
             return
 
@@ -62,6 +63,11 @@ class ServerProtocol(protocol.Protocol):
         if request:
             with self._read_lock:
                 self._recv_buffer = self._recv_buffer[offset:]
+        else:
+            # 没有解析到数据，判断是否出现了错误
+            if offset == EUnpackState.LENGTH_OVER:
+                # 发送的数据太长了，断开连接
+                self.transport.loseConnection()
 
         return request
 
