@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 from dataclasses import dataclass, field
 
 from twisted.internet.defer import Deferred
@@ -17,11 +17,6 @@ class Cluster:
 
     # 所有的节点数据
     remotes: Dict[int, Remote] = field(default_factory=dict)
-
-    # 网关id列表(不是网关的服务可以通过遍历所有的网关，然后吧数据发送给所有的网关)
-    gates: List[int] = field(default_factory=list)
-    # 所有的服务器列表 [1, 2, 3]，元素是nodeid
-    servers: List[int] = field(default_factory=list)
 
     def init_cluster(self, node_id):
         # 读取配置文件
@@ -42,7 +37,7 @@ class Cluster:
 
     def _read_config(self, local_node_id: int):
         # 读取配置文件
-        data = file.load_json_file(globalconfig.config_path)
+        data = file.load_json_file(globalconfig.cluster_config_path)
 
         # 本地节点
         self.local_node_info = globalconfig.NodeInfo.from_dict(data["nodes"][str(local_node_id)])
@@ -52,12 +47,6 @@ class Cluster:
             if _info.node_id == local_node_id:
                 continue
             self.remotes[_info.node_id] = Remote(_info.host, _info.port, _info.name)
-
-        # 所有的网关
-        self.gates = list(map(int, data["gates"].keys()))
-
-        # 网关转发选择发服务列表
-        self.servers = data["servers"]
 
     def console_nodes(self):
         print(f"my node: {self.local_node_info.node_id}, cluster nodes: ", [i for i in self.remotes.keys()])

@@ -5,13 +5,14 @@ from cluster.service import Service
 
 import server
 from net.connmanager import Request, Response
-from net import protocol
+from net import protocol, msghandler
 
 
 netfactory = protocol.ServerFactory()
 
 # 断开连接的回调
 netfactory.conn_lost_callback = lambda d: print("offline callback.", d)
+netfactory.msg_handler = msghandler.MsgHandler()
 
 
 def ping_view(request: Request):

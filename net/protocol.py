@@ -1,11 +1,22 @@
 import threading
+from dataclasses import dataclass
+from typing import Optional
 from twisted.internet import protocol
 
 from log import log
-from config import globalconfig
 
 from net.connmanager import ConnectionManager
 from net.datapack import DataPack, EUnpackState
+
+
+@dataclass
+class FactoryConfig:
+    """tcp服务配置"""
+    port: int
+    # 最大连接数
+    max_connection_num: int = 1024
+    # 最大数据包的大小
+    package_max_size: int = 2 ** 16
 
 
 class ServerProtocol(protocol.Protocol):
@@ -20,8 +31,8 @@ class ServerProtocol(protocol.Protocol):
         self._data_handler = None
 
     def connectionMade(self):
-        if self.factory.conn_manager.get_conns_cnt() >= globalconfig.NET_CONFIG.max_connection_num:
-            log.lgserver.warning(f"max client online, max={globalconfig.NET_CONFIG.max_connection_num}!")
+        if self.factory.conn_manager.get_conns_cnt() >= self.factory.config.max_connection_num:
+            log.lgserver.warning(f"max client online, max={self.factory.config.max_connection_num}!")
             self.transport.loseConnection()
             return
 
@@ -103,6 +114,8 @@ class ServerFactory(protocol.Factory):
     msg_handler = None
     # 连接断开的回调
     conn_lost_callback = None
+    # *** 配置
+    config: Optional[FactoryConfig] = None
 
     def startFactory(self):
         # 开启消息处理队列
@@ -126,5 +139,5 @@ class ServerFactory(protocol.Factory):
     def do_conn_lost(self, conn):
         if self.conn_lost_callback is None:
             return
-
+        print("do_conn_lost", conn)
         self.conn_lost_callback(conn)

@@ -79,8 +79,8 @@ class Remote:
         self._factory = ClusterPBClientFactory()
         # 连接远端的时候必须增加延时操作
         # 加了失败重连和断线重连后，可以不用延迟了...
-        # reactor.connectTCP(self._host, self._port, self._factory)
-        timer.add_later_task(1, reactor.connectTCP, self._host, self._port, self._factory)
+        reactor.connectTCP(self._host, self._port, self._factory)
+        # timer.add_later_task(1, reactor.connectTCP, self._host, self._port, self._factory)
 
     def call_remote_handler(self, nodeid, name, *args, **kwargs):
         """调用远程的处理函数
