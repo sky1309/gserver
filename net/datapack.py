@@ -2,7 +2,6 @@ import enum
 import struct
 
 from log import log
-from config.globalconfig import NET_CONFIG
 
 from .connmanager import Request, Response
 
@@ -15,14 +14,10 @@ class EUnpackState(enum.IntEnum):
 
 
 class DataPack:
-    # 传输数据格式解析
+    # 最大数据包的大小
+    package_max_size = 2 ** 16 - 1
 
-    def __init__(self, fmt=None, message_id_fmt=None):
-        if fmt is None:
-            fmt = NET_CONFIG.default_fmt
-        if message_id_fmt is None:
-            message_id_fmt = NET_CONFIG.default_message_id_fmt
-
+    def __init__(self, fmt=">H", message_id_fmt=">H"):
         # 由于可能㛮粘包的问题，所以在传输数据的过程中，需要在数据的头部加上一个表示
         self.head_struct = struct.Struct(fmt)
         self.message_id_struct = struct.Struct(message_id_fmt)
@@ -49,8 +44,8 @@ class DataPack:
             return None, int(EUnpackState.LENGTH_NOT_ENOUGH)
 
         message_length, = self.head_struct.unpack_from(data, 0)
-        if message_length > NET_CONFIG.package_max_size:
-            log.lgserver.warning(f"invalid package size:{message_length}, expect lte:{NET_CONFIG.package_max_size}!")
+        if message_length > self.package_max_size:
+            log.lgserver.warning(f"invalid package size:{message_length}, expect lte:{self.package_max_size}!")
             return None, int(EUnpackState.LENGTH_OVER)
 
         # 本条数据的结束为止
