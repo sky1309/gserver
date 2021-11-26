@@ -19,6 +19,8 @@
       "port": 3638
     }
   },
+  "discovery_nodes": [1, 2],
+  "servers": [2, 3],
   "gates": {
     "1": {
       "node_id": 1,
@@ -27,6 +29,5 @@
       "max_connection_num": 100,
       "worker_size": 2
     }
-  },
-  "servers": [2, 3]
+  }
 }
