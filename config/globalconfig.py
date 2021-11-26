@@ -1,7 +1,8 @@
 import os
-import json
 from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
+
+from util import file
 
 # 配置文件路径项目启动目录下面 WORKSPACE/
 config_path = os.path.join(os.getcwd(), "config/config.json")
@@ -38,8 +39,7 @@ class NetConfig:
 
     def load_config(self, node_id):
         """加载配置文件"""
-        with open(config_path, "r") as f:
-            config = json.load(f)
+        config = file.load_json_file(config_path)
 
         # 只加载有的字段
         for key, value in config["gates"][str(node_id)].items():

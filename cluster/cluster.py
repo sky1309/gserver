@@ -1,9 +1,9 @@
-import json
 from typing import Dict, Optional, List
 from dataclasses import dataclass, field
 
 from twisted.internet.defer import Deferred
 
+from util import file
 from config import globalconfig
 from cluster.pb import Remote, Root
 
@@ -42,17 +42,20 @@ class Cluster:
 
     def _read_config(self, local_node_id: int):
         # 读取配置文件
-        with open(globalconfig.config_path, "r") as f:
-            data = json.load(f)
+        data = file.load_json_file(globalconfig.config_path)
 
-        for _info in map(lambda d: globalconfig.NodeInfo.from_dict(d), data["nodes"].values()):
+        # 本地节点
+        self.local_node_info = globalconfig.NodeInfo.from_dict(data["nodes"][str(local_node_id)])
+
+        # 能被发现的节点
+        for _info in map(lambda d: globalconfig.NodeInfo.from_dict(data["nodes"][str(d)]), data["discovery_nodes"]):
             if _info.node_id == local_node_id:
-                self.local_node_info = _info
-            else:
-                self.remotes[_info.node_id] = Remote(_info.host, _info.port, _info.name)
+                continue
+            self.remotes[_info.node_id] = Remote(_info.host, _info.port, _info.name)
 
         # 所有的网关
         self.gates = list(map(int, data["gates"].keys()))
+
         # 网关转发选择发服务列表
         self.servers = data["servers"]
 
