@@ -1,25 +1,37 @@
+import time
 from util import timer
 
 import server
 from cluster import service
+from module import module
 
-sv = service.Service("logic")
-server.cluster.pb_server.set_service(sv)
+
+class GameModule(module.Module):
+
+    service = None
+
+    def on_init(self):
+        server.cluster.pb_server.set_service(self.service)
+
 
 gates = [1]
+gamemodule = GameModule("game")
+gamemodule.service = service.Service("game")
 
 
-@sv.route(1)
-def test(caller, sessionid, data):
+@gamemodule.service.route(1)
+def login(caller, sessionid, data):
     for gate_node_id in gates:
-        server.cluster.call_node(gate_node_id, "sendto_session", caller.msg_id, b'logic test data.', sessionid)
+        server.cluster.call_node(gate_node_id, "sendto_session", caller.msg_id, b'game login success', sessionid)
 
 
-def test_loop_task():
-    for gate_node_id in gates:
-        server.cluster.call_node(gate_node_id, "broadcast", 1, f'node{server.sys_args.nodeid} data!!'.encode())
+def loop_heartbeat():
+    for gate in gates:
+        server.cluster.call_node(gate, "broadcast", 0, f"heartbeat_{time.time()}".encode())
 
 
-timer.add_loop_task(2, test_loop_task, now=False)
+timer.add_loop_task(2, loop_heartbeat)
 
+
+server.setup(gamemodule)
 server.serve_forever()
