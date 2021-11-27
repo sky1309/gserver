@@ -3,7 +3,7 @@ import argparse
 from twisted.internet import reactor
 
 # 初始化配置数据
-from cluster import cluster
+from cluster import cluster as pcluster
 
 
 # 系统的参数处理
@@ -15,7 +15,8 @@ sys_args = parser.parse_args()
 
 
 # * 初始化集群数据 -nodeid=1
-cluster.cluster.init_cluster(sys_args.nodeid)
+cluster = pcluster.Cluster()
+cluster.init_cluster(sys_args.nodeid)
 
 
 def serve_forever():
