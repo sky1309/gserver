@@ -12,7 +12,7 @@ netfactory = protocol.ServerFactory()
 
 # 断开连接的回调
 netfactory.conn_lost_callback = lambda d: print("offline callback.", d)
-netfactory.msg_handler = msghandler.MsgHandler()
+netfactory.service = msghandler.MsgHandler()
 
 
 def ping_view(request: Request):
@@ -20,7 +20,7 @@ def ping_view(request: Request):
 
 
 # 注册路由
-netfactory.msg_handler.register_route(1, ping_view)
+netfactory.service.register_route(1, ping_view)
 
 
 # 测试的发送数据给所有的连接

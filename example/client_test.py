@@ -7,6 +7,7 @@ from net.connmanager import Response
 def main():
     ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     ss.connect(("127.0.0.1", 1111))
+    # ss.connect(("107.182.26.43", 1111))
 
     datapack = DataPack()
     data = datapack.pack_response(Response(1, b'abc'))
