@@ -21,9 +21,7 @@ class FactoryConfig:
 
 class ServerProtocol(protocol.Protocol):
 
-    def __init__(self, *args, **kwargs):
-        super(ServerProtocol, self).__init__(*args, **kwargs)
-
+    def __init__(self):
         # 接受缓冲区
         self._recv_buffer = b""
         # 写锁、发送缓冲区
@@ -111,33 +109,20 @@ class ServerFactory(protocol.Factory):
     # 数据解析
     datapack = DataPack()
     # 消息处理
-    msg_handler = None
+    service = None
     # 连接断开的回调
     conn_lost_callback = None
     # *** 配置
     config: Optional[FactoryConfig] = None
 
-    def startFactory(self):
-        # 开启消息处理队列
-        if self.msg_handler:
-            self.msg_handler.start()
-
-    def stopFactory(self):
-        if self.msg_handler:
-            self.msg_handler.stop()
-
-    def set_datapack(self, datapack):
-        self.datapack = datapack
-
     def deal_requests(self, *requests):
         """处理请求处理"""
-        if not self.msg_handler:
+        if not self.service:
             log.lgserver.warning("factory not set message handler!")
             return
-        self.msg_handler.add_to_task_queue(*requests)
+        self.service.handle_requests(*requests)
 
     def do_conn_lost(self, conn):
         if self.conn_lost_callback is None:
             return
-        print("do_conn_lost", conn)
         self.conn_lost_callback(conn)

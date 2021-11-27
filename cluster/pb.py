@@ -18,9 +18,9 @@ def client_reconnect(connector):
 class CallerInfo:
     """Remote调用方的信息"""
     # 远程节点id
-    nodeid: int
+    node_id: int
     # 消息id || service的路由id
-    msgid: Union[str, int]
+    msg_id: Union[str, int]
 
 
 class ClusterPBServerFactory(pb.PBServerFactory):
@@ -37,6 +37,7 @@ class ClusterPBClientFactory(pb.PBClientFactory):
 
     def clientConnectionFailed(self, connector, reason):
         """客户端连接服务器失败后，尝试重新连接"""
+        super(ClusterPBClientFactory, self).clientConnectionFailed(connector, reason)
         # 延迟重连
         timer.add_later_task(self.reconnect_interval, client_reconnect, connector)
 
@@ -64,7 +65,7 @@ class Root(pb.Root):
 
     def remote_handle(self, nodeid, key, *args, **kwargs):
         """调用远程的服务"""
-        caller = CallerInfo(nodeid=nodeid, msgid=key)
+        caller = CallerInfo(nodeid, key)
         return self._service.call_handler(key, caller, *args, **kwargs)
 
 
@@ -79,8 +80,8 @@ class Remote:
         self._factory = ClusterPBClientFactory()
         # 连接远端的时候必须增加延时操作
         # 加了失败重连和断线重连后，可以不用延迟了...
-        reactor.connectTCP(self._host, self._port, self._factory)
-        # timer.add_later_task(1, reactor.connectTCP, self._host, self._port, self._factory)
+        # reactor.connectTCP(self._host, self._port, self._factory)
+        timer.add_later_task(1, reactor.connectTCP, self._host, self._port, self._factory)
 
     def call_remote_handler(self, nodeid, name, *args, **kwargs):
         """调用远程的处理函数
