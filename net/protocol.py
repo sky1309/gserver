@@ -15,8 +15,6 @@ class FactoryConfig:
     port: int
     # 最大连接数
     max_connection_num: int = 1024
-    # 最大数据包的大小
-    package_max_size: int = 2 ** 16
 
 
 class ServerProtocol(protocol.Protocol):
@@ -107,13 +105,17 @@ class ServerFactory(protocol.Factory):
     # 连接管理
     conn_manager = ConnectionManager()
     # 数据解析
-    datapack = DataPack()
+    datapack = None
     # 消息处理
     service = None
     # 连接断开的回调
     conn_lost_callback = None
     # *** 配置
     config: Optional[FactoryConfig] = None
+
+    def startFactory(self):
+        if not self.datapack:
+            self.datapack = DataPack()
 
     def deal_requests(self, *requests):
         """处理请求处理"""

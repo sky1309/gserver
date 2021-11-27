@@ -6,6 +6,15 @@ from log import log
 from .connmanager import Request, Response
 
 
+def get_head_format(length, little_endian=False):
+    head = "<" if little_endian else ">"
+    if length == 2:
+        s = "H"
+    else:
+        s = "I"
+    return head + s
+
+
 class EUnpackState(enum.IntEnum):
     # 长度不足
     LENGTH_NOT_ENOUGH = -1
@@ -14,13 +23,34 @@ class EUnpackState(enum.IntEnum):
 
 
 class DataPack:
-    # 最大数据包的大小
-    package_max_size = 2 ** 16 - 1
 
-    def __init__(self, fmt=">H", message_id_fmt=">H"):
-        # 由于可能㛮粘包的问题，所以在传输数据的过程中，需要在数据的头部加上一个表示
-        self.head_struct = struct.Struct(fmt)
-        self.message_id_struct = struct.Struct(message_id_fmt)
+    def __init__(self, head_len=2, max_msg_len=65535, little_endian=False):
+        """
+        参数:
+          - head_len: int 头包含几个字节
+          - max_msg_len: int 一个数据包最大的大小
+          - little_endian: bool 是否是小端，默认是大段，高位对齐
+        """
+        self.head_len = head_len
+        # 一次最多接受的数据大小
+        self.max_msg_len = max_msg_len
+        self.little_endian = little_endian
+
+        self.head_struct = struct.Struct(get_head_format(self.head_len, self.little_endian))
+        self.message_id_struct = struct.Struct(get_head_format(2, self.little_endian))
+
+    def set_head_len(self, head_len):
+        # 设置头的长处，重新设置 self.head_struct
+        self.head_len = head_len
+        self.head_struct = struct.Struct(get_head_format(self.head_len, self.little_endian))
+
+    def set_little_endian(self, little_endian=False):
+        # 设置大小端
+        if self.little_endian == little_endian:
+            return
+        self.little_endian = little_endian
+        self.head_struct = struct.Struct(get_head_format(self.head_len, self.little_endian))
+        self.message_id_struct = struct.Struct(get_head_format(2, self.little_endian))
 
     def pack(self, data: bytes) -> bytes:
         """打包数据"""
@@ -44,8 +74,8 @@ class DataPack:
             return None, int(EUnpackState.LENGTH_NOT_ENOUGH)
 
         message_length, = self.head_struct.unpack_from(data, 0)
-        if message_length > self.package_max_size:
-            log.lgserver.warning(f"invalid package size:{message_length}, expect lte:{self.package_max_size}!")
+        if message_length > self.max_msg_len:
+            log.lgserver.warning(f"invalid package size:{message_length}, expect lte:{self.max_msg_len}!")
             return None, int(EUnpackState.LENGTH_OVER)
 
         # 本条数据的结束为止
