@@ -16,6 +16,12 @@ def setup(module: pmodule.Module) -> bool:
     _modules[module.name] = module
 
 
+def init():
+    # 初始化所有的模块
+    for module in _modules.values():
+        module.on_init()
+
+
 def start():
     # 启动所有的模块
     for module in _modules.values():

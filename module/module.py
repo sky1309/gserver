@@ -7,14 +7,19 @@ from cluster import cluster as pcluster
 class Module:
     cluster: Optional[pcluster.Cluster] = None
 
-    def __init__(self, cluster=None):
+    def __init__(self, name, cluster=None, config=None):
+        # 名称
+        self.name = name
+        # 集群通讯
         self.cluster = cluster
-        self.name = ""
+        # 配置
+        self.config = config
+
+    def on_init(self):
+        # 初始化完成
+        pass
 
     def start(self):
-        self.on_start()
-
-    def on_start(self):
         pass
 
     def stop(self):
