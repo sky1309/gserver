@@ -3,7 +3,7 @@ from twisted.internet import reactor
 from log import log
 
 import server
-from cluster import cluster, service
+from cluster import service
 from net import protocol
 from net.connmanager import Response
 
@@ -31,12 +31,12 @@ netfactory.config = protocol.FactoryConfig(port)
 # 消息处理
 netfactory.service = gate_service
 # 设置集群rpc服务，目前是和gate的net共用一个
-cluster.cluster.pb_server.set_service(gate_service)
+server.cluster.pb_server.set_service(gate_service)
 
 
 @gate_service.route("transmit")
 def transmit(request):
-    cluster.cluster.call_node(2, request.msg_id, request.conn.id, request.data)
+    server.cluster.call_node(2, request.msg_id, request.conn.id, request.data)
 
 
 # gate以外的服务可以调用这个，给指定的session发送数据

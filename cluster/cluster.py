@@ -55,6 +55,3 @@ class Cluster:
         if node_id not in self.remotes:
             return
         return self.remotes[node_id].call_remote_handler(self.local_node_info.node_id, name, *args, **kwargs)
-
-
-cluster = Cluster()
