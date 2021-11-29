@@ -14,6 +14,7 @@ def setup(module: pmodule.Module) -> bool:
         return False
 
     _modules[module.name] = module
+    return True
 
 
 def init():

@@ -27,6 +27,9 @@ class GateModule(module.Module):
         self.netfactory = protocol.ServerFactory()
         self.netfactory.config = protocol.FactoryConfig(self.config["port"])
 
+        # 断开连接回调
+        if self.config.get("conn_lost_callback"):
+            self.netfactory.conn_lost_callback = self.config["conn_lost_callback"]
         # 最大连接数
         max_connection_num = self.config.get("max_connection_num")
         if max_connection_num:
