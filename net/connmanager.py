@@ -15,7 +15,7 @@ class Request:
         self.conn = conn
 
     def __str__(self):
-        return f"Request< msgid: {self.msg_id}>, data: {self.data}"
+        return f"Request< msgid: {self.msg_id}>, len: {len(self.data)} data: {self.data}"
 
 
 @dataclass

@@ -1,3 +1,5 @@
+import random
+
 import server
 from sysmodule import gate as sysmodulegate
 
@@ -7,9 +9,12 @@ from sysmodule import gate as sysmodulegate
 #   2. 接受远程逻辑服务器的数据，并发给客户端
 #################
 
+gatemodule = sysmodulegate.GateModule("gate", server.cluster, config={"port": 1111})
+gatemodule.transmit_node_func = lambda: random.choice([2])
+
 # 注册模块
 server.setup(
-    sysmodulegate.GateModule("gate", server.cluster, config={"port": 1111}),
+    gatemodule,
 )
 
 server.serve_forever()

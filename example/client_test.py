@@ -1,23 +1,31 @@
+import time
+import json
 import socket
+import threading
 
 from net.datapack import DataPack
 from net.connmanager import Response
 
+ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+ss.connect(("127.0.0.1", 1111))
 
-def main():
-    ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    ss.connect(("127.0.0.1", 1111))
-    # ss.connect(("107.182.26.43", 1111))
+datapack = DataPack()
+data = datapack.pack_response(Response(1, json.dumps({"userid": "abcde", "password": "123456"}).encode()))
 
-    datapack = DataPack()
-    data = datapack.pack_response(Response(1, b'abc'))
-    ss.send(data)
+
+def target():
     while True:
-        revc = ss.recv(1024)
-        if not revc:
-            break
-        print("receive data: ", revc)
+        time.sleep(1)
+        ss.send(data)
 
 
-if __name__ == '__main__':
-    main()
+t = threading.Thread(target=target)
+t.setDaemon(True)
+t.start()
+
+ss.send(data)
+while True:
+    revc = ss.recv(1024)
+    if not revc:
+        break
+    print("receive data: ", revc)

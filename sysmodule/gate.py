@@ -1,12 +1,11 @@
 from twisted.internet import reactor
 
 from log import log
-from cluster import service
 from module import module
 from net import protocol, datapack, connmanager
 
 
-class GateService(service.Service):
+class GateService(module.ModuleService):
 
     def handle_requests(self, *requests):
         for req in requests:
@@ -49,7 +48,10 @@ class GateModule(module.Module):
             self.netfactory.datapack.set_little_endian(little_endian)
 
         # 消息处理
-        self.netfactory.service = GateService("gate")
+        service = GateService("gate")
+        service.set_module(self)
+        # netfactory和rpc server共用一个service
+        self.netfactory.service = service
         self.cluster.pb_server.set_service(self.netfactory.service)
         self._init_service()
 

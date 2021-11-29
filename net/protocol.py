@@ -33,11 +33,8 @@ class ServerProtocol(protocol.Protocol):
             return
 
         # 收到socket连接后创建一个连接对象
-        conn_str = "*** new conn: total: {}, sid: {}, addr: {} ***".format(
-            self.factory.conn_manager.get_conns_cnt(), self.transport.sessionno, self.transport.hostname)
-        print("-" * len(conn_str))
-        print(conn_str)
-        print("-" * len(conn_str))
+        log.lgserver.info("*** new conn: total: {}, sid: {}, addr: {} ***".format(
+            self.factory.conn_manager.get_conns_cnt(), self.transport.sessionno, self.transport.hostname))
 
         # 添加一个新的连接 && 调用 connection的on_start方法
         self.factory.conn_manager.add_conn(self)
@@ -48,7 +45,7 @@ class ServerProtocol(protocol.Protocol):
     def connectionLost(self, reason=protocol.connectionDone):
         """conn 关闭，手动调用也可以，这个函数执行了，就会把连接给关闭了
         """
-        print("[conn {}] closed!".format(self.transport.sessionno))
+        log.lgserver.info("[conn {}] closed!".format(self.transport.sessionno))
         # 关闭携程(携程可能没有创建)
         if self._data_handler:
             self._data_handler.close()
