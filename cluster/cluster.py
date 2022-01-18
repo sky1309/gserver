@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from twisted.internet.defer import Deferred
 
 from util import file
+from common import log
 from config import globalconfig
 from cluster.pb import Remote, Root
 
@@ -23,15 +24,15 @@ class Cluster:
         self._read_config(node_id)
         # 启动本地的
         self._start_local_node()
-        # 连接到远端
-        self._connect_remote()
+        # 连接到远端，先不连接到远端，只有在用到的时候再连接
+        # self._connect_remote()
+        self.console_nodes()
 
     def _start_local_node(self):
         self.pb_server = Root()
         self.pb_server.start(self.local_node_info.port)
 
     def _connect_remote(self):
-        self.console_nodes()
         for remote in self.remotes.values():
             remote.connect_remote()
 
@@ -49,7 +50,7 @@ class Cluster:
             self.remotes[_info.node_id] = Remote(_info.host, _info.port, _info.name)
 
     def console_nodes(self):
-        print(f"my node: {self.local_node_info.node_id}, cluster nodes: ", [i for i in self.remotes.keys()])
+        log.lgserver.info(f"当前节点: {self.local_node_info.node_id}, 远程节点: {[i for i in self.remotes.keys()]}")
 
     def call_node(self, node_id, name, *args, **kwargs) -> Optional[Deferred]:
         if node_id not in self.remotes:

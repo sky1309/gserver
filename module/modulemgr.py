@@ -1,4 +1,4 @@
-from log import log
+from common import log
 
 from module import module as pmodule
 

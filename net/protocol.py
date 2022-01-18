@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from typing import Optional
 from twisted.internet import protocol
 
-from log import log
+from common import log
 
-from net.connmanager import ConnectionManager
+from net.connmanager import ConnectionManager, RequestPackage
 from net.datapack import DataPack, EUnpackState
 
 
@@ -61,10 +61,10 @@ class ServerProtocol(protocol.Protocol):
 
     def _parse_row(self):
         # 读取一行的数据（一条有效的数据）
-        request, offset = self.factory.datapack.unpack(self._recv_buffer)
+        data, offset = self.factory.datapack.unpack(self._recv_buffer)
 
         # 如果读到了数据，那么需要处理
-        if request:
+        if not isinstance(offset, EUnpackState):
             with self._read_lock:
                 self._recv_buffer = self._recv_buffer[offset:]
         else:
@@ -73,7 +73,10 @@ class ServerProtocol(protocol.Protocol):
                 # 发送的数据太长了，断开连接
                 self.transport.loseConnection()
 
-        return request
+        if not data:
+            return None
+
+        return RequestPackage(data=data)
 
     def _data_handle_coroutine(self):
         """读取数据的时候"""
@@ -83,18 +86,17 @@ class ServerProtocol(protocol.Protocol):
             # 没有需要接受接受的数据了，跳过
             self._recv_buffer += d
 
-            requests = list()
+            packages = list()
             while len(self._recv_buffer) >= head_length:
-                request = self._parse_row()
-                if not request:
+                package = self._parse_row()
+                if not package:
                     break
 
-                request.set_conn(self.factory.conn_manager.get_conn_by_id(self.transport.sessionno))
-                requests.append(request)
-                # 如果 requests 中量很大了，先扔到处理的队列中去
+                package.set_conn(self.factory.conn_manager.get_conn_by_id(self.transport.sessionno))
+                packages.append(package)
 
             # 处理消息
-            self.factory.deal_requests(*requests)
+            self.factory.deal_packages(*packages)
 
 
 class ServerFactory(protocol.Factory):
@@ -104,7 +106,7 @@ class ServerFactory(protocol.Factory):
     # 数据解析
     datapack = None
     # 消息处理
-    service = None
+    handler = None
     # 连接断开的回调
     conn_lost_callback = None
     # *** 配置
@@ -114,12 +116,14 @@ class ServerFactory(protocol.Factory):
         if not self.datapack:
             self.datapack = DataPack()
 
-    def deal_requests(self, *requests):
-        """处理请求处理"""
-        if not self.service:
-            log.lgserver.warning("factory not set message handler!")
+    def deal_packages(self, *packages):
+        """处理请求数据包"""
+        if not self.handler:
+            log.lgserver.warning("factory not set package handler!")
             return
-        self.service.handle_requests(*requests)
+
+        for package in packages:
+            self.handler.process_package(package)
 
     def do_conn_lost(self, conn):
         if self.conn_lost_callback is None:

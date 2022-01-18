@@ -1,9 +1,6 @@
 import enum
 import struct
-
-from log import log
-
-from .connmanager import Request, Response
+from typing import Union
 
 
 def get_head_format(length, little_endian=False):
@@ -16,6 +13,7 @@ def get_head_format(length, little_endian=False):
 
 
 class EUnpackState(enum.IntEnum):
+    OK = 0
     # 长度不足
     LENGTH_NOT_ENOUGH = -1
     # 长度超了
@@ -37,30 +35,12 @@ class DataPack:
         self.little_endian = little_endian
 
         self.head_struct = struct.Struct(get_head_format(self.head_len, self.little_endian))
-        self.message_id_struct = struct.Struct(get_head_format(2, self.little_endian))
 
-    def set_head_len(self, head_len):
-        # 设置头的长处，重新设置 self.head_struct
-        self.head_len = head_len
-        self.head_struct = struct.Struct(get_head_format(self.head_len, self.little_endian))
-
-    def set_little_endian(self, little_endian=False):
-        # 设置大小端
-        if self.little_endian == little_endian:
-            return
-        self.little_endian = little_endian
-        self.head_struct = struct.Struct(get_head_format(self.head_len, self.little_endian))
-        self.message_id_struct = struct.Struct(get_head_format(2, self.little_endian))
-
-    def pack(self, data: bytes) -> bytes:
+    def pack(self, message: bytes) -> bytes:
         """打包数据"""
-        return self.head_struct.pack(len(data)) + data
+        return self.head_struct.pack(len(message)) + message
 
-    def pack_response(self, response: Response):
-        data = self.message_id_struct.pack(response.msg_id) + response.body
-        return self.pack(data)
-
-    def unpack(self, data: bytes) -> (Request, int):
+    def unpack(self, data: bytes) -> (bytes, Union[int, EUnpackState]):
         """解析接收到的数据
         返回值：(Optional[Request, int])
            解析成功 (Request, int)
@@ -75,7 +55,6 @@ class DataPack:
 
         message_length, = self.head_struct.unpack_from(data, 0)
         if message_length > self.max_msg_len:
-            log.lgserver.warning(f"invalid package size:{message_length}, expect lte:{self.max_msg_len}!")
             return None, int(EUnpackState.LENGTH_OVER)
 
         # 本条数据的结束为止
@@ -84,8 +63,7 @@ class DataPack:
         if data_length < end_index:
             return None, int(EUnpackState.LENGTH_NOT_ENOUGH)
 
-        message_id, = self.message_id_struct.unpack_from(data, head_length)
-        return Request(message_id, data[head_length + self.message_id_struct.size: end_index]), end_index
+        return data[head_length:end_index], end_index
 
     def get_head_len(self):
         """获取协议头的长度

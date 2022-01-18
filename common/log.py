@@ -1,6 +1,9 @@
 import logging
 from logging import config as _config
 
+from common import globalvariable
+
+
 LOG_CONFIG = {
     "version": 1,
     "formatters": {
@@ -10,7 +13,7 @@ LOG_CONFIG = {
     },
     "handlers": {
         "console": {
-            "level": "DEBUG",
+            "level": globalvariable.sysargs.debuglevel,
             "formatter": "simple",
             "class": "logging.StreamHandler"
         },

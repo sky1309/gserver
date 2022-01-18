@@ -4,13 +4,16 @@ import socket
 import threading
 
 from net.datapack import DataPack
-from net.connmanager import Response
 
 ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-ss.connect(("127.0.0.1", 1111))
+ss.connect(("127.0.0.1", 8000))
 
 datapack = DataPack()
-data = datapack.pack_response(Response(1, json.dumps({"userid": "abcde", "password": "123456"}).encode()))
+data = datapack.pack(json.dumps({
+    "a": "ping",
+    "d": {"hhhh": 1},
+    "h": 1
+}).encode())
 
 
 def target():

@@ -1,11 +1,12 @@
-from twisted.internet import reactor
+import threading
 from dataclasses import dataclass
+
+from twisted.internet import reactor
 
 
 @dataclass
-class Request:
-    # 消息id
-    msg_id: int
+class RequestPackage:
+    """一个数据包"""
     # 数据
     data: bytes
     # 连接
@@ -14,31 +15,26 @@ class Request:
     def set_conn(self, conn: "Connection"):
         self.conn = conn
 
-    def __str__(self):
-        return f"Request< msgid: {self.msg_id}>, len: {len(self.data)} data: {self.data}"
-
-
-@dataclass
-class Response:
-    # 消息id
-    msg_id: int
-    # body
-    body: bytes
-
 
 class Connection:
     def __init__(self, proto):
         self.protocol = proto
+        self.lock = threading.Lock()
 
     def lose_connection(self):
         self.protocol.transport.lostConnection()
 
     def write(self, data: bytes):
+        # 写最简单的bytes数据
+        # *** callFromThread 是reactor的mainloop中执行的，所以最好是只发发数据不处理逻辑
         reactor.callFromThread(self.protocol.transport.write, data)
 
-    def send_response(self, *responses):
-        for response in responses:
-            self.write(self.protocol.factory.datapack.pack_response(response))
+    def write_message(self, *messages):
+        for message in messages:
+            self.write(self.protocol.factory.datapack.pack(message))
+
+    def __str__(self):
+        return f"sid: {self.id}, host: {self.protocol.transport.client}"
 
     @property
     def id(self):
@@ -73,19 +69,19 @@ class ConnectionManager:
     def get_conn_by_id(self, pk):
         return self._connections.get(pk)
 
-    def sendto_sessions(self, response, send_list):
+    def sendto_sessions(self, message: bytes, send_list):
         """根据会话id，发送给这些连接数据"""
         for pk in send_list:
             if pk not in self._connections:
                 continue
 
             try:
-                self._connections[pk].send_response(response)
+                self._connections[pk].write_message(message)
             except:
                 pass
 
-    def sendto_all(self, response):
-        self.sendto_sessions(response, self._connections.keys())
+    def sendto_all(self, message: bytes):
+        self.sendto_sessions(message, self._connections.keys())
 
     def close_all(self):
         for conn in list(self._connections.values()):

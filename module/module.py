@@ -1,7 +1,7 @@
 from typing import Optional
 
-from log import log
-from cluster import cluster as pcluster, service
+from common import log
+from cluster import cluster as pcluster
 
 
 class Module:
@@ -31,10 +31,3 @@ class Module:
 
     def on_stop(self):
         pass
-
-
-class ModuleService(service.Service):
-    module: Optional[Module] = None
-
-    def set_module(self, module):
-        self.module = module

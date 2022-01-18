@@ -1,22 +1,14 @@
-import argparse
 
 from twisted.internet import reactor
 
+from common import globalvariable
 from cluster import cluster as pcluster
 from module import modulemgr
 
 
-# 系统的参数处理
-parser = argparse.ArgumentParser()
-# 节点id（rpc）
-parser.add_argument("-nodeid", required=True, dest="nodeid", type=int)
-# ....
-sys_args = parser.parse_args()
-
-
 # * 初始化集群数据 -nodeid=1
 cluster = pcluster.Cluster()
-cluster.init_cluster(sys_args.nodeid)
+cluster.init_cluster(globalvariable.sysargs.nodeid)
 
 
 def setup(*modules):

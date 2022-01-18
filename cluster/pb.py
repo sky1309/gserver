@@ -4,13 +4,13 @@ from dataclasses import dataclass
 from twisted.spread import pb
 from twisted.internet import reactor
 
-from log import log
+from common import log
 from util import timer
 
 
 def client_reconnect(connector):
     """客户端重连"""
-    log.lgserver.debug(f"{connector} reconnecting...")
+    log.lgserver.warning(f"{connector} reconnecting...")
     connector.connect()
 
 
@@ -33,7 +33,7 @@ class ClusterPBServerFactory(pb.PBServerFactory):
 class ClusterPBClientFactory(pb.PBClientFactory):
     """集群rcp客户端"""
     # 重连的时间间隔
-    reconnect_interval = 2
+    reconnect_interval = 2.5
 
     def clientConnectionFailed(self, connector, reason):
         """客户端连接服务器失败后，尝试重新连接"""
@@ -50,15 +50,15 @@ class ClusterPBClientFactory(pb.PBClientFactory):
 
 class Root(pb.Root):
     def __init__(self):
-        # cluster.service.Service
-        self._service = None
+        # common.handler.BaseHandler
+        self._handler = None
 
     def start(self, port):
         reactor.listenTCP(port, ClusterPBServerFactory(self))
 
-    def set_service(self, service):
+    def set_handler(self, handler):
         """设置消息处理"""
-        self._service = service
+        self._handler = handler
 
     def remote_ping(self):
         return "pong"
@@ -66,7 +66,7 @@ class Root(pb.Root):
     def remote_handle(self, nodeid, key, *args, **kwargs):
         """调用远程的服务"""
         caller = CallerInfo(nodeid, key)
-        return self._service.call_handler(key, caller, *args, **kwargs)
+        return self._handler.dispatch(key, caller, *args, **kwargs)
 
 
 class Remote:
@@ -76,17 +76,25 @@ class Remote:
         self._name = name
         self._factory = None
 
-    def connect_remote(self):
+    def connect_remote(self, delay=0):
+        # 已经初始化过了
+        if self._factory:
+            return
+
         self._factory = ClusterPBClientFactory()
         # 连接远端的时候必须增加延时操作
         # 加了失败重连和断线重连后，可以不用延迟了...
-        # reactor.connectTCP(self._host, self._port, self._factory)
-        timer.add_later_task(1, reactor.connectTCP, self._host, self._port, self._factory)
+        if delay > 0:
+            timer.add_later_task(delay, reactor.connectTCP, self._host, self._port, self._factory)
+        else:
+            reactor.connectTCP(self._host, self._port, self._factory)
 
     def call_remote_handler(self, nodeid, name, *args, **kwargs):
         """调用远程的处理函数
         参数:
           - nodeid: int 调用人的节点id
         """
+        self.connect_remote()
+
         root = self._factory.getRootObject()
         return root.addCallback(lambda d: d.callRemote("handle", nodeid, name, *args, **kwargs))
